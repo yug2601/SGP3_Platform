@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "@/components/motion"
-import { Plus, Search, Filter, Calendar, User } from "lucide-react"
+import { Plus, Search, Filter, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TaskCard } from "@/components/TaskCard"
+import { Card, CardContent } from "@/components/ui/card"
+import { ProgressiveList } from "@/components/ProgressiveList"
+import dynamic from "next/dynamic"
+const TaskCard = dynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
 import { Modal } from "@/components/Modal"
 import {
   DropdownMenu,
@@ -14,84 +16,92 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-const mockTasks = [
-  {
-    id: "1",
-    title: "Design homepage mockup",
-    description: "Create wireframes and high-fidelity mockups for the new homepage design",
-    status: "done" as const,
-    priority: "high" as const,
-    dueDate: "Nov 15",
-    assignee: { name: "Jane Smith", avatar: "" },
-    project: "Website Redesign"
-  },
-  {
-    id: "2",
-    title: "Implement responsive navigation",
-    description: "Build mobile-responsive navigation component with hamburger menu",
-    status: "in-progress" as const,
-    priority: "medium" as const,
-    dueDate: "Nov 20",
-    assignee: { name: "Mike Johnson", avatar: "" },
-    project: "Website Redesign"
-  },
-  {
-    id: "3",
-    title: "Set up authentication system",
-    description: "Implement user login and registration functionality",
-    status: "todo" as const,
-    priority: "high" as const,
-    dueDate: "Nov 25",
-    assignee: { name: "Sarah Wilson", avatar: "" },
-    project: "Website Redesign"
-  },
-  {
-    id: "4",
-    title: "Design user onboarding flow",
-    description: "Create wireframes for the mobile app user onboarding experience",
-    status: "in-progress" as const,
-    priority: "medium" as const,
-    dueDate: "Dec 1",
-    assignee: { name: "Lisa Wang", avatar: "" },
-    project: "Mobile App Development"
-  },
-  {
-    id: "5",
-    title: "API endpoint documentation",
-    description: "Document all REST API endpoints with examples and usage",
-    status: "todo" as const,
-    priority: "low" as const,
-    dueDate: "Dec 5",
-    assignee: { name: "Alex Chen", avatar: "" },
-    project: "API Integration"
-  }
-]
+import { api } from "@/lib/api"
+import type { Project, Task } from "@/lib/types"
+import { useToast } from "@/components/ui/toast"
 
 export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedQuery, setDebouncedQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterPriority, setFilterPriority] = useState<string>("all")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const projectNameById = useMemo(() => Object.fromEntries(projects.map(p => [p.id, p.name])), [projects])
+  const [loading, setLoading] = useState(false)
+  const [newTask, setNewTask] = useState({ title: "", description: "", projectId: "", priority: "medium", dueDate: "" })
+  const { show, Toast } = useToast()
 
-  const filteredTasks = mockTasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         task.project.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = filterStatus === "all" || task.status === filterStatus
-    const matchesPriority = filterPriority === "all" || task.priority === filterPriority
-    return matchesSearch && matchesStatus && matchesPriority
-  })
+  async function load() {
+    setLoading(true)
+    try {
+      const [t, p] = await Promise.all([
+        api<Task[]>("/api/tasks"),
+        api<Project[]>("/api/projects"),
+      ])
+      setTasks(t)
+      setProjects(p)
+    } catch {
+      // ignore for now
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const taskStats = {
-    total: mockTasks.length,
-    todo: mockTasks.filter(t => t.status === "todo").length,
-    inProgress: mockTasks.filter(t => t.status === "in-progress").length,
-    done: mockTasks.filter(t => t.status === "done").length,
+  useEffect(() => {
+    load()
+  }, [])
+
+  // debounce search to keep typing smooth
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(searchQuery), 200)
+    return () => clearTimeout(id)
+  }, [searchQuery])
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const q = debouncedQuery.toLowerCase()
+      const matchesSearch = task.title.toLowerCase().includes(q) || (task.description || '').toLowerCase().includes(q)
+      const matchesStatus = filterStatus === "all" || task.status === filterStatus
+      const matchesPriority = filterPriority === "all" || task.priority === filterPriority
+      return matchesSearch && matchesStatus && matchesPriority
+    })
+  }, [tasks, debouncedQuery, filterStatus, filterPriority])
+
+  const taskStats = useMemo(() => ({
+    total: tasks.length,
+    todo: tasks.filter(t => t.status === "todo").length,
+    inProgress: tasks.filter(t => t.status === "in-progress").length,
+    done: tasks.filter(t => t.status === "done").length,
+  }), [tasks])
+
+  async function createTask() {
+    if (!newTask.title.trim() || !newTask.projectId) return
+    try {
+      const created = await api<Task>("/api/tasks", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: newTask.projectId,
+          title: newTask.title,
+          description: newTask.description,
+          priority: newTask.priority,
+          status: "todo",
+          dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : undefined,
+        }),
+      })
+      setTasks(prev => [created, ...prev])
+      setIsCreateModalOpen(false)
+      setNewTask({ title: "", description: "", projectId: "", priority: "medium", dueDate: "" })
+      show("Task created")
+    } catch {
+      show("Failed to create task")
+    }
   }
 
   return (
     <div className="space-y-6">
+      <Toast />
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -224,25 +234,48 @@ export default function TasksPage() {
       </Card>
 
       {/* Tasks Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTasks.map((task, index) => (
-          <motion.div
-            key={task.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-          >
-            <div className="space-y-2">
-              <TaskCard task={task} />
-              <p className="text-xs text-muted-foreground px-2">
-                Project: {task.project}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-40 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div>
+          <ProgressiveList
+            items={filteredTasks}
+            containerClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            initial={18}
+            step={18}
+            renderItem={(task, index) => (
+              <motion.div
+                key={(task as any).id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                <div className="space-y-2">
+                  <TaskCard
+                    task={{
+                      ...(task as any),
+                      dueDate: (task as any).dueDate ? new Date((task as any).dueDate).toLocaleDateString() : '',
+                    } as any}
+                    onUpdate={async (patch) => {
+                      await api(`/api/tasks/${(task as any).id}`, { method: 'PATCH', body: JSON.stringify(patch) })
+                      setTasks(prev => prev.map(t => t.id === (task as any).id ? { ...t, ...patch } as any : t))
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground px-2">
+                    Project: {projectNameById[(task as any).projectId] || '—'}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          />
+        </div>
+      )}
 
-      {filteredTasks.length === 0 && (
+      {!loading && filteredTasks.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No tasks found matching your criteria.</p>
         </div>
@@ -258,25 +291,43 @@ export default function TasksPage() {
         <div className="space-y-4 py-4">
           <div>
             <label className="text-sm font-medium">Task Title</label>
-            <Input placeholder="Enter task title..." className="mt-1" />
+            <Input
+              placeholder="Enter task title..."
+              className="mt-1"
+              value={newTask.title}
+              onChange={(e) => setNewTask(t => ({ ...t, title: e.target.value }))}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Description</label>
-            <Input placeholder="Task description..." className="mt-1" />
+            <Input
+              placeholder="Task description..."
+              className="mt-1"
+              value={newTask.description}
+              onChange={(e) => setNewTask(t => ({ ...t, description: e.target.value }))}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Project</label>
-            <select className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={newTask.projectId}
+              onChange={(e) => setNewTask(t => ({ ...t, projectId: e.target.value }))}
+            >
               <option value="">Select a project</option>
-              <option value="website">Website Redesign</option>
-              <option value="mobile">Mobile App Development</option>
-              <option value="api">API Integration</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Priority</label>
-              <select className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newTask.priority}
+                onChange={(e) => setNewTask(t => ({ ...t, priority: e.target.value }))}
+              >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -284,14 +335,19 @@ export default function TasksPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Due Date</label>
-              <Input type="date" className="mt-1" />
+              <Input
+                type="date"
+                className="mt-1"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask(t => ({ ...t, dueDate: e.target.value }))}
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setIsCreateModalOpen(false)}>
+            <Button onClick={createTask}>
               Create Task
             </Button>
           </div>

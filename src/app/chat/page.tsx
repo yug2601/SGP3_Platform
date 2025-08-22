@@ -1,143 +1,113 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState, memo } from "react"
+import { useUser } from "@clerk/nextjs"
 import { motion } from "@/components/motion"
-import { Search, Plus, Hash, Users, Send, Smile } from "lucide-react"
+import { Search, Plus, Hash, Send, Smile, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChatMessage } from "@/components/ChatMessage"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ProgressiveList } from "@/components/ProgressiveList"
+import dynamic from "next/dynamic"
+const ChatMessage = dynamic(() => import("@/components/ChatMessage").then(m => m.ChatMessage), { ssr: false })
 import { cn } from "@/lib/utils"
+import { api } from "@/lib/api"
+import type { Project, ChatMessageItem } from "@/lib/types"
 
-const mockChatRooms = [
-  {
-    id: "1",
-    name: "General",
-    type: "channel" as const,
-    unreadCount: 3,
-    lastMessage: "Hey everyone, how's the project going?",
-    lastMessageTime: "2 min ago"
-  },
-  {
-    id: "2",
-    name: "Website Redesign",
-    type: "channel" as const,
-    unreadCount: 0,
-    lastMessage: "I've uploaded the latest mockups",
-    lastMessageTime: "1 hour ago"
-  },
-  {
-    id: "3",
-    name: "Random",
-    type: "channel" as const,
-    unreadCount: 1,
-    lastMessage: "Anyone up for lunch?",
-    lastMessageTime: "3 hours ago"
-  }
-]
-
-const mockDirectMessages = [
-  {
-    id: "dm1",
-    name: "Jane Smith",
-    type: "dm" as const,
-    avatar: "",
-    unreadCount: 2,
-    lastMessage: "Can you review the designs?",
-    lastMessageTime: "5 min ago",
-    isOnline: true
-  },
-  {
-    id: "dm2",
-    name: "Mike Johnson",
-    type: "dm" as const,
-    avatar: "",
-    unreadCount: 0,
-    lastMessage: "Thanks for the help!",
-    lastMessageTime: "2 hours ago",
-    isOnline: false
-  },
-  {
-    id: "dm3",
-    name: "Sarah Wilson",
-    type: "dm" as const,
-    avatar: "",
-    unreadCount: 0,
-    lastMessage: "See you tomorrow",
-    lastMessageTime: "1 day ago",
-    isOnline: true
-  }
-]
-
-const mockMessages = [
-  {
-    id: "1",
-    content: "Good morning everyone! Hope you all had a great weekend.",
-    sender: { name: "Jane Smith", avatar: "" },
-    timestamp: "9:00 AM",
-    isCurrentUser: false
-  },
-  {
-    id: "2",
-    content: "Morning Jane! Yes, it was great. Ready to tackle this week's tasks.",
-    sender: { name: "Mike Johnson", avatar: "" },
-    timestamp: "9:05 AM",
-    isCurrentUser: false
-  },
-  {
-    id: "3",
-    content: "I've been working on the homepage designs over the weekend. Should I share them now or wait for the design review meeting?",
-    sender: { name: "Jane Smith", avatar: "" },
-    timestamp: "9:10 AM",
-    isCurrentUser: false
-  },
-  {
-    id: "4",
-    content: "Please share them now! I'm excited to see what you've come up with.",
-    sender: { name: "You", avatar: "" },
-    timestamp: "9:12 AM",
-    isCurrentUser: true
-  },
-  {
-    id: "5",
-    content: "Here are the latest mockups: [Design File Link]. Let me know what you think!",
-    sender: { name: "Jane Smith", avatar: "" },
-    timestamp: "9:15 AM",
-    isCurrentUser: false
-  },
-  {
-    id: "6",
-    content: "These look amazing! The color scheme is perfect. When can we start implementing?",
-    sender: { name: "Mike Johnson", avatar: "" },
-    timestamp: "9:20 AM",
-    isCurrentUser: false
-  }
-]
+const ProjectRoomItem = memo(function ProjectRoomItem({ p, activeId, onSelect }: { p: Project, activeId: string, onSelect: (id: string) => void }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={cn(
+        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+        activeId === p.id ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+      )}
+      onClick={() => onSelect(p.id)}
+    >
+      <Hash className="h-4 w-4 text-muted-foreground" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{p.name}</p>
+        <p className="text-xs text-muted-foreground truncate">{p.description}</p>
+      </div>
+    </motion.div>
+  )
+})
 
 export default function ChatPage() {
-  const [selectedChat, setSelectedChat] = useState("1")
+  const { user } = useUser()
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+  const [messages, setMessages] = useState<ChatMessageItem[]>([])
   const [messageInput, setMessageInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [debounced, setDebounced] = useState("")
 
-  const selectedChatData = [...mockChatRooms, ...mockDirectMessages].find(
-    chat => chat.id === selectedChat
-  )
+  useEffect(() => {
+    api<Project[]>("/api/projects").then((p) => {
+      setProjects(p)
+      if (p[0]) setSelectedProjectId(p[0].id)
+    }).catch(() => setProjects([]))
+  }, [])
 
-  const filteredRooms = mockChatRooms.filter(room =>
-    room.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  useEffect(() => {
+    if (!selectedProjectId) return
+    api<ChatMessageItem[]>(`/api/chat/${selectedProjectId}`).then(setMessages).catch(() => setMessages([]))
+    let socket: any
+    ;(async () => {
+      try {
+        await fetch('/api/socketio')
+        const { io } = await import('socket.io-client')
+        socket = io({ path: '/api/socketio' })
+        const room = `project:${selectedProjectId}`
+        socket.emit('join', room)
+        socket.on('chat:message', (msg: ChatMessageItem) => {
+          if (msg.projectId === selectedProjectId) {
+            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+          }
+        })
+      } catch {}
+    })()
+    return () => { try { socket?.disconnect?.() } catch {} }
+  }, [selectedProjectId])
 
-  const filteredDMs = mockDirectMessages.filter(dm =>
-    dm.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(searchQuery), 200)
+    return () => clearTimeout(id)
+  }, [searchQuery])
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      // Handle sending message
-      setMessageInput("")
+  const filteredProjects = useMemo(() => {
+    const q = debounced.toLowerCase()
+    return projects.filter(p => p.name.toLowerCase().includes(q))
+  }, [projects, debounced])
+
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedProjectId) return
+    const optimistic: ChatMessageItem = {
+      id: Math.random().toString(36).slice(2, 9),
+      projectId: selectedProjectId,
+      content: messageInput,
+      sender: { id: user?.id || 'me', name: user?.fullName || 'You' },
+      timestamp: new Date().toISOString(),
     }
+    setMessages(prev => [...prev, optimistic])
+    setMessageInput("")
+    try {
+      const created = await api<ChatMessageItem>(`/api/chat/${selectedProjectId}`, {
+        method: 'POST',
+        body: JSON.stringify({ content: optimistic.content, sender: optimistic.sender }),
+      })
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? created : m))
+      try {
+        const { io } = await import('socket.io-client')
+        const s = io({ path: '/api/socketio' })
+        s.emit('chat:send', { projectId: selectedProjectId, content: created.content, sender: created.sender })
+        setTimeout(() => s.disconnect(), 400)
+      } catch {}
+    } catch {}
   }
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId)
 
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-6">
@@ -153,7 +123,7 @@ export default function ChatPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search conversations..."
+              placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -161,91 +131,25 @@ export default function ChatPage() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto space-y-4">
-          {/* Channels */}
+          {/* Projects as Rooms */}
           <div>
             <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-              <Hash className="h-3 w-3" />
-              Channels
+              <FolderOpen className="h-3 w-3" />
+              Projects
             </h3>
             <div className="space-y-1">
-              {filteredRooms.map((room) => (
-                <motion.div
-                  key={room.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                    selectedChat === room.id
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-muted"
-                  )}
-                  onClick={() => setSelectedChat(room.id)}
-                >
-                  <Hash className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">{room.name}</p>
-                      {room.unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                          {room.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {room.lastMessage}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Direct Messages */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-              <Users className="h-3 w-3" />
-              Direct Messages
-            </h3>
-            <div className="space-y-1">
-              {filteredDMs.map((dm) => (
-                <motion.div
-                  key={dm.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                    selectedChat === dm.id
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-muted"
-                  )}
-                  onClick={() => setSelectedChat(dm.id)}
-                >
-                  <div className="relative">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={dm.avatar} />
-                      <AvatarFallback className="text-xs">
-                        {dm.name.split(" ").map(n => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    {dm.isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">{dm.name}</p>
-                      {dm.unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                          {dm.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {dm.lastMessage}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+              <ProgressiveList
+                items={filteredProjects}
+                initial={40}
+                step={40}
+                renderItem={(p) => (
+                  <ProjectRoomItem key={(p as any).id} p={p as any} activeId={selectedProjectId} onSelect={setSelectedProjectId} />
+                )}
+                containerClassName="space-y-1"
+              />
+              {filteredProjects.length === 0 && (
+                <p className="text-sm text-muted-foreground">No projects.</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -253,46 +157,44 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <Card className="flex-1 flex flex-col">
-        {selectedChatData && (
+        {selectedProject && (
           <>
             <CardHeader className="border-b">
               <div className="flex items-center gap-3">
-                {selectedChatData.type === "channel" ? (
-                  <Hash className="h-5 w-5 text-muted-foreground" />
-                ) : (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={(selectedChatData as any).avatar} />
-                    <AvatarFallback className="text-xs">
-                      {selectedChatData.name.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+                <Hash className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <h2 className="font-semibold">{selectedChatData.name}</h2>
-                  {selectedChatData.type === "dm" && (
-                    <p className="text-xs text-muted-foreground">
-                      {(selectedChatData as any).isOnline ? "Online" : "Offline"}
-                    </p>
-                  )}
+                  <h2 className="font-semibold">{selectedProject.name}</h2>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {selectedProject.description}
+                  </p>
                 </div>
               </div>
             </CardHeader>
 
             <CardContent className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4">
-                {mockMessages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
+                {messages.map((m) => (
+                  <ChatMessage key={m.id} message={{
+                    id: m.id,
+                    content: m.content,
+                    sender: { name: m.sender.name, avatar: m.sender.avatar },
+                    timestamp: new Date(m.timestamp).toLocaleTimeString(),
+                    isCurrentUser: (user?.fullName || 'You') === m.sender.name,
+                  }} />
                 ))}
+                {messages.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No messages yet.</p>
+                )}
               </div>
             </CardContent>
 
             <div className="border-t p-4">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="Type a message..."
+                  placeholder={`Message #${selectedProject.name}`}
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                   className="flex-1"
                 />
                 <Button size="icon" variant="ghost">

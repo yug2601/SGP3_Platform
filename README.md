@@ -2,23 +2,55 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+1) Install dependencies
+
+```bash
+npm install
+```
+
+2) Configure environment variables in `.env.local`
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority&appName=<appName>
+```
+
+3) Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Public routes: `/`, `/about`, `/help`, `/privacy`, `/sign-in`, `/sign-up`
+All other routes are protected by Clerk.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### MongoDB Atlas quick setup
+- Create a free cluster at MongoDB Atlas
+- Create a DB user and allow your IP (or 0.0.0.0/0 for dev)
+- Get the driver connection string and set `MONGODB_URI` above
+
+### Seed demo data (dev-only)
+- With the dev server running and after setting MONGODB_URI:
+  - POST http://localhost:3000/api/dev/seed (e.g., via curl or REST client)
+- It creates sample projects, tasks, notifications, activity, and chat messages
+
+### Realtime chat
+- Socket.IO namespace at `/api/socketio`
+- The app initializes the bridge when you open the Chat page
+
+### Scripts
+- `npm run dev` – start dev server
+- `npm run build` – build
+- `npm start` – run production build
+- `npm run lint` – lint
+
+### Notes
+- Tech: Next.js App Router, React 19, Tailwind CSS 4, Clerk, Mongoose
+- DB models: see `src/lib/models.ts`
+- API routes: see `src/app/api/*`
 
 ## Learn More
 

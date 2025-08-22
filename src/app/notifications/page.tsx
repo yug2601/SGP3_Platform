@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState, memo } from "react"
 import { motion } from "@/components/motion"
 import { 
   Bell, 
@@ -10,11 +10,11 @@ import {
   MoreHorizontal,
   MessageCircle,
   UserPlus,
-  Calendar,
   AlertTriangle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import { ProgressiveList } from "@/components/ProgressiveList"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -23,79 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-
-const mockNotifications = [
-  {
-    id: "1",
-    type: "comment",
-    title: "New comment on Website Redesign",
-    message: "Jane Smith commented: 'The new design looks great! Can we discuss the color scheme?'",
-    time: "2 minutes ago",
-    isRead: false,
-    avatar: "",
-    sender: "Jane Smith"
-  },
-  {
-    id: "2",
-    type: "task_assigned",
-    title: "You were assigned to a new task",
-    message: "Mike Johnson assigned you to 'Implement responsive navigation' in Website Redesign project",
-    time: "1 hour ago",
-    isRead: false,
-    avatar: "",
-    sender: "Mike Johnson"
-  },
-  {
-    id: "3",
-    type: "project_update",
-    title: "Project status updated",
-    message: "Website Redesign project progress updated to 75%",
-    time: "3 hours ago",
-    isRead: true,
-    avatar: "",
-    sender: "System"
-  },
-  {
-    id: "4",
-    type: "team_invite",
-    title: "New team member joined",
-    message: "Sarah Wilson joined the Website Redesign project team",
-    time: "5 hours ago",
-    isRead: true,
-    avatar: "",
-    sender: "Sarah Wilson"
-  },
-  {
-    id: "5",
-    type: "deadline",
-    title: "Task deadline approaching",
-    message: "Task 'Set up authentication system' is due in 2 days",
-    time: "1 day ago",
-    isRead: false,
-    avatar: "",
-    sender: "System"
-  },
-  {
-    id: "6",
-    type: "comment",
-    title: "New comment on Mobile App Development",
-    message: "Alex Chen commented: 'I've finished the API integration. Ready for testing.'",
-    time: "2 days ago",
-    isRead: true,
-    avatar: "",
-    sender: "Alex Chen"
-  },
-  {
-    id: "7",
-    type: "task_completed",
-    title: "Task completed",
-    message: "Lisa Wang completed 'Design user onboarding flow' in Mobile App Development",
-    time: "3 days ago",
-    isRead: true,
-    avatar: "",
-    sender: "Lisa Wang"
-  }
-]
+import { api } from "@/lib/api"
+import type { Notification } from "@/lib/types"
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -116,37 +45,134 @@ const getNotificationIcon = (type: string) => {
   }
 }
 
+const NotificationItem = memo(function NotificationItem({ notification, index, onMarkRead, onArchive }: {
+  notification: Notification
+  index: number
+  onMarkRead: (id: string) => void
+  onArchive: (id: string) => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+    >
+      <Card
+        className={cn(
+          "transition-all hover:shadow-md cursor-pointer",
+          !notification.isRead && "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
+        )}
+        onClick={() => !notification.isRead && onMarkRead(notification.id)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              {getNotificationIcon(notification.type)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <h3 className={cn(
+                    "font-medium text-sm",
+                    !notification.isRead && "font-semibold"
+                  )}>
+                    {notification.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {notification.message}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {notification.sender && notification.sender.name && (
+                      <>
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={notification.sender.avatar} />
+                          <AvatarFallback className="text-xs">
+                            {notification.sender.name.split(" ").map(n => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground">
+                          {notification.sender.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                      </>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(notification.time).toLocaleString()}
+                    </span>
+                    {!notification.isRead && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                      </>
+                    )}
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {!notification.isRead && (
+                      <DropdownMenuItem onClick={() => onMarkRead(notification.id)}>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Mark as Read
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => onArchive(notification.id)} className="text-red-600">
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+})
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [filter, setFilter] = useState<"all" | "unread">("all")
+  const [search, setSearch] = useState("")
+  const [debounced, setDebounced] = useState("")
 
-  const filteredNotifications = notifications.filter(notification => {
-    if (filter === "unread") return !notification.isRead
-    return true
-  })
+  useEffect(() => {
+    api<Notification[]>("/api/notifications").then(setNotifications).catch(() => {})
+  }, [])
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(search), 200)
+    return () => clearTimeout(id)
+  }, [search])
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    )
+  const filteredNotifications = useMemo(() => notifications.filter(notification => {
+    if (filter === "unread" && notification.isRead) return false
+    const q = debounced.toLowerCase()
+    const inText = notification.title.toLowerCase().includes(q) || notification.message.toLowerCase().includes(q)
+    return inText
+  }), [notifications, filter, debounced])
+
+  const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications])
+
+  const markAsRead = async (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
+    await api<Notification>(`/api/notifications/${id}`, { method: 'PATCH' }).catch(() => {})
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, isRead: true }))
-    )
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.isRead)
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    await Promise.all(unread.map(n => api(`/api/notifications/${n.id}`, { method: 'PATCH' }).catch(() => {})))
   }
 
-  const archiveNotification = (id: string) => {
-    setNotifications(prev =>
-      prev.filter(notification => notification.id !== id)
-    )
+  const archiveNotification = async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+    await api(`/api/notifications/${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
   return (
@@ -168,6 +194,15 @@ export default function NotificationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search notifications..."
+              className="px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{debounced ? ' ' : ''}</span>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -205,92 +240,21 @@ export default function NotificationsPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredNotifications.map((notification, index) => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              <Card
-                className={cn(
-                  "transition-all hover:shadow-md cursor-pointer",
-                  !notification.isRead && "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
-                )}
-                onClick={() => !notification.isRead && markAsRead(notification.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <h3 className={cn(
-                            "font-medium text-sm",
-                            !notification.isRead && "font-semibold"
-                          )}>
-                            {notification.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            {notification.sender !== "System" && (
-                              <>
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={notification.avatar} />
-                                  <AvatarFallback className="text-xs">
-                                    {notification.sender.split(" ").map(n => n[0]).join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-muted-foreground">
-                                  {notification.sender}
-                                </span>
-                                <span className="text-xs text-muted-foreground">•</span>
-                              </>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {notification.time}
-                            </span>
-                            {!notification.isRead && (
-                              <>
-                                <span className="text-xs text-muted-foreground">•</span>
-                                <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {!notification.isRead && (
-                              <DropdownMenuItem onClick={() => markAsRead(notification.id)}>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark as Read
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => archiveNotification(notification.id)}
-                              className="text-red-600"
-                            >
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archive
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))
+          <ProgressiveList
+            items={filteredNotifications}
+            initial={20}
+            step={20}
+            renderItem={(notification, index) => (
+              <NotificationItem
+                key={(notification as any).id}
+                notification={notification as any}
+                index={index}
+                onMarkRead={markAsRead}
+                onArchive={archiveNotification}
+              />
+            )}
+            containerClassName="space-y-4"
+          />
         )}
       </div>
     </div>

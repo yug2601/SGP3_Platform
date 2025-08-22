@@ -17,7 +17,9 @@ interface ChatMessageProps {
   }
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+import { memo } from "react"
+
+function ChatMessageInner({ message }: ChatMessageProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -61,3 +63,5 @@ export function ChatMessage({ message }: ChatMessageProps) {
     </motion.div>
   )
 }
+
+export const ChatMessage = memo(ChatMessageInner)

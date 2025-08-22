@@ -72,7 +72,7 @@ const mockTasks = [
   }
 ]
 
-export default function ProjectTasksPage({ params }: { params: { projectId: string } }) {
+export default function ProjectTasksPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterPriority, setFilterPriority] = useState<string>("all")

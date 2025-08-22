@@ -8,7 +8,6 @@ import {
   Bell, 
   Shield, 
   Palette, 
-  Globe,
   Save,
   Trash2
 } from "lucide-react"

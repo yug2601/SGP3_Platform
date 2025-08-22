@@ -13,6 +13,10 @@ export default function SignInPage() {
           </p>
         </div>
         <SignIn 
+          routing="path"
+          path="/sign-in"
+          signUpUrl="/sign-up"
+          afterSignInUrl="/"
           appearance={{
             elements: {
               rootBox: "mx-auto",

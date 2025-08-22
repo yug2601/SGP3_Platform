@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "@/components/motion"
-import { Calendar, User, AlertCircle } from "lucide-react"
+import { Calendar, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -10,16 +10,17 @@ interface TaskCardProps {
   task: {
     id: string
     title: string
-    description: string
+    description?: string
     status: "todo" | "in-progress" | "done"
     priority: "low" | "medium" | "high"
-    dueDate: string
-    assignee: {
+    dueDate?: string
+    assignee?: {
       name: string
       avatar?: string
     }
   }
   onClick?: () => void
+  onUpdate?: (patch: Partial<TaskCardProps["task"]>) => void
 }
 
 const statusColors = {
@@ -34,17 +35,12 @@ const priorityColors = {
   high: "text-red-600",
 }
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+import { memo } from "react"
+
+function TaskCardInner({ task, onClick, onUpdate }: TaskCardProps) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card
-        className="cursor-pointer transition-shadow hover:shadow-md"
-        onClick={onClick}
-      >
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+      <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={onClick}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <CardTitle className="text-base font-medium">{task.title}</CardTitle>
@@ -52,34 +48,34 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
               <AlertCircle className={cn("h-4 w-4", priorityColors[task.priority])} />
             </div>
           </div>
-          <span
-            className={cn(
-              "inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium",
-              statusColors[task.status]
-            )}
-          >
+          <span className={cn("inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium", statusColors[task.status])}>
             {task.status.replace("-", " ")}
           </span>
         </CardHeader>
         <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {task.description}
-          </p>
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{task.description}</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarImage src={task.assignee.avatar} />
+                <AvatarImage src={task.assignee?.avatar} />
                 <AvatarFallback className="text-xs">
-                  {task.assignee.name.split(" ").map(n => n[0]).join("")}
+                  {task.assignee?.name?.split(" ").map(n => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-xs text-muted-foreground">
-                {task.assignee.name}
-              </span>
+              <span className="text-xs text-muted-foreground">{task.assignee?.name || "Unassigned"}</span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              {task.dueDate}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {task.dueDate || "No due"}
+              </div>
+              {onUpdate && (
+                <select aria-label="Status" className="border rounded px-1 py-0.5 bg-background" value={task.status} onChange={(e) => onUpdate({ status: e.target.value as any })}>
+                  <option value="todo">To Do</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              )}
             </div>
           </div>
         </CardContent>
@@ -87,3 +83,5 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     </motion.div>
   )
 }
+
+export const TaskCard = memo(TaskCardInner)

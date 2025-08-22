@@ -1,12 +1,14 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { ThemeProvider } from 'next-themes'
 import { motion, AnimatePresence } from '@/components/motion'
 import { usePathname } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { Sidebar } from '@/components/Sidebar'
-import { Footer } from '@/components/Footer'
 import { useUIStore } from '@/lib/zustand'
+
+const Header = dynamic(() => import('@/components/Header').then(m => m.Header), { ssr: false })
+const Sidebar = dynamic(() => import('@/components/Sidebar').then(m => m.Sidebar), { ssr: false })
+const Footer = dynamic(() => import('@/components/Footer').then(m => m.Footer), { ssr: false })
 
 export function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -19,16 +21,16 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         <Header />
         <div className="flex">
           <Sidebar />
           <motion.main
             animate={{
-              marginLeft: sidebarCollapsed ? 80 : 256,
+              marginLeft: sidebarCollapsed ? 80 : 280,
             }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex-1 min-h-[calc(100vh-4rem)]"
+            className="flex-1 min-h-[calc(100vh-4rem)] relative"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -36,8 +38,8 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="container mx-auto px-4 py-6"
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="container mx-auto px-6 py-8 max-w-7xl"
               >
                 {children}
               </motion.div>
