@@ -26,6 +26,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
   const params = use(paramsPromise)
   const [activeTab, setActiveTab] = useState("overview")
   const [project, setProject] = useState<Project | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('You')
   const [tasks, setTasks] = useState<Task[]>([])
   const [messages, setMessages] = useState<ChatMessageItem[]>([])
   const [messageInput, setMessageInput] = useState("")
@@ -45,6 +46,10 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
         const m = await api<ChatMessageItem[]>(`/api/chat/${params.projectId}`)
         if (!cancelled) setMessages(m)
       } catch { if (!cancelled) setMessages([]) }
+      try {
+        const me = await api<{ name: string }>(`/api/me`).catch(() => ({ name: 'You' }))
+        if (!cancelled) setCurrentUserName(me.name || 'You')
+      } catch {}
     })()
     return () => { cancelled = true }
   }, [params.projectId])
@@ -73,6 +78,22 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
   }, [params.projectId])
 
   const completedCount = useMemo(() => tasks.filter(t => t.status === 'done').length, [tasks])
+  // auto-update project progress based on tasks if available
+  useEffect(() => {
+    if (!project) return
+    const total = tasks.length
+    if (total === 0) return
+    const done = tasks.filter(t => t.status === 'done').length
+    const computed = Math.round((done / total) * 100)
+    if (computed !== project.progress) {
+      ;(async () => {
+        try {
+          const updated = await api<Project>(`/api/projects/${project.id}`, { method: 'PATCH', body: JSON.stringify({ progress: computed }) })
+          setProject(updated)
+        } catch {}
+      })()
+    }
+  }, [tasks, project])
 
   const sendMessage = React.useCallback(async () => {
     if (!messageInput.trim()) return
@@ -264,7 +285,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                   }}>Join by Code</Button>
                 </div>
                 <div className="space-y-3">
-                  {project.members.map((member, index) => (
+                  {[...project.members].sort((a, b) => (a.name === currentUserName ? -1 : b.name === currentUserName ? 1 : 0)).map((member, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
@@ -279,7 +300,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{member.name}</p>
+                        <p className="font-medium">{member.name}{member.name === currentUserName ? ' (you)' : ''}</p>
                         <p className="text-sm text-muted-foreground">Member</p>
                       </div>
                     </motion.div>
@@ -348,7 +369,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                     content: m.content,
                     sender: { name: m.sender.name, avatar: m.sender.avatar },
                     timestamp: new Date(m.timestamp).toLocaleTimeString(),
-                    isCurrentUser: m.sender.name === 'You',
+                    isCurrentUser: m.sender.name === currentUserName || m.sender.name === 'You',
                   }} />
                 ))}
               </div>

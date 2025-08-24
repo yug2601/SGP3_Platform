@@ -1,0 +1,66 @@
+@startuml
+left to right direction
+actor "Authenticated User" as U
+actor "Project Owner" as PO
+actor "System Admin" as Admin
+actor "Clerk Auth" as Clerk
+actor "DB (MongoDB Atlas)" as DB
+actor "File Storage (S3/GCS)" as FS
+actor "Realtime Service" as RT
+
+rectangle "TogetherFlow App (Planned)" {
+  usecase (Authenticate with Clerk) as UC_AuthClerk
+  usecase (Access Protected Routes) as UC_Protected
+
+  usecase (Manage Projects CRUD) as UC_ProjectsCRUD
+  usecase (Manage Tasks CRUD) as UC_TasksCRUD
+  usecase (Manage Notifications CRUD) as UC_NotifCRUD
+  usecase (View Activity Feed) as UC_Activity
+
+  usecase (Upload Files) as UC_Upload
+  usecase (Download Files) as UC_Download
+
+  usecase (Chat: Send Message) as UC_ChatSend
+  usecase (Chat: Receive Message) as UC_ChatReceive
+
+  usecase (Manage Workspace Roles) as UC_Roles
+
+  usecase (Call API Routes) as UC_API
+  usecase (Validate Input (zod)) as UC_Validate
+  usecase (Generate IDs (nanoid)) as UC_ID
+}
+
+U -- UC_Protected
+U -- UC_ProjectsCRUD
+U -- UC_TasksCRUD
+U -- UC_NotifCRUD
+U -- UC_Activity
+U -- UC_Upload
+U -- UC_Download
+U -- UC_ChatSend
+U -- UC_ChatReceive
+
+PO -- UC_Roles
+Admin -- UC_Roles
+
+UC_Protected .> UC_AuthClerk : include
+
+UC_ProjectsCRUD .> UC_API : include
+UC_TasksCRUD .> UC_API : include
+UC_NotifCRUD .> UC_API : include
+UC_Activity .> UC_API : include
+UC_Upload .> UC_API : include
+UC_Download .> UC_API : include
+UC_ChatSend .> UC_API : include
+UC_ChatReceive .> UC_API : include
+
+UC_API .> UC_Validate : include
+UC_API .> UC_ID : include
+
+DB -- UC_API
+FS -- UC_Upload
+FS -- UC_Download
+RT -- UC_ChatSend
+RT -- UC_ChatReceive
+Clerk -- UC_AuthClerk
+@enduml

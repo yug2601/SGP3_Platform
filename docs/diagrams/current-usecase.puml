@@ -1,0 +1,64 @@
+@startuml
+left to right direction
+actor Visitor as V
+actor "Authenticated User" as U
+actor "Clerk Auth" as Clerk
+
+rectangle "TogetherFlow App (Current)" {
+  usecase (View Public Pages) as UC_Public
+  usecase (Sign Up) as UC_SignUp
+  usecase (Sign In) as UC_SignIn
+  usecase (Sign Out) as UC_SignOut
+  usecase (Access Protected Routes) as UC_Protected
+  usecase (Authenticate with Clerk) as UC_AuthClerk
+
+  usecase (View Dashboard) as UC_Dashboard
+  usecase (Browse Projects) as UC_BrowseProjects
+  usecase (Search/Filter Projects) as UC_SearchProjects
+  usecase (View Project Detail) as UC_ProjectDetail
+  usecase (View Tasks) as UC_ViewTasks
+
+  usecase (Create Task [UI-only]) as UC_CreateTask
+  usecase (Edit Task [UI-only]) as UC_EditTask
+  usecase (Delete Task [UI-only]) as UC_DeleteTask
+
+  usecase (View Notifications [UI-only]) as UC_ViewNotifications
+  usecase (Mark Notification Read/Dismiss [UI-only]) as UC_MarkNotif
+
+  usecase (Manage Profile) as UC_Profile
+  usecase (Toggle Theme) as UC_ToggleTheme
+}
+
+Clerk -- UC_AuthClerk
+
+V -- UC_Public
+V -- UC_SignUp
+V -- UC_SignIn
+
+U -- UC_SignOut
+U -- UC_Protected
+U -- UC_Dashboard
+U -- UC_BrowseProjects
+U -- UC_SearchProjects
+U -- UC_ProjectDetail
+U -- UC_ViewTasks
+U -- UC_CreateTask
+U -- UC_EditTask
+U -- UC_DeleteTask
+U -- UC_ViewNotifications
+U -- UC_MarkNotif
+U -- UC_Profile
+U -- UC_ToggleTheme
+
+UC_Protected .> UC_AuthClerk : include
+UC_Dashboard .> UC_Protected : include
+UC_BrowseProjects .> UC_Protected : include
+UC_SearchProjects .> UC_Protected : include
+UC_ProjectDetail .> UC_Protected : include
+UC_ViewTasks .> UC_ProjectDetail : include
+UC_CreateTask .> UC_Protected : include
+UC_EditTask .> UC_Protected : include
+UC_DeleteTask .> UC_Protected : include
+UC_ViewNotifications .> UC_Protected : include
+UC_MarkNotif .> UC_ViewNotifications : extend
+@enduml

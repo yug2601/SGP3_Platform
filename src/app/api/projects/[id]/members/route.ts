@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { createClerkClient } from '@clerk/backend'
 import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, UserModel } from '@/lib/models'
+import { ProjectModel, UserModel, ActivityModel } from '@/lib/models'
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { userId } = await auth()
@@ -48,5 +48,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (exists) return NextResponse.json({ added: true })
 
   await ProjectModel.updateOne({ _id: id }, { $push: { members: toAdd } })
+  try {
+    await ActivityModel.create({ type: 'member_added', message: `${toAdd.name} joined the project`, user: { id: userId, name: 'You' }, projectId: id as any })
+  } catch {}
   return NextResponse.json({ added: true })
 }

@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, ChatMessageModel } from '@/lib/models'
+import { ProjectModel, ChatMessageModel, ActivityModel } from '@/lib/models'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ projectId: string }> }) {
   await dbConnect()
@@ -33,6 +33,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ project
   if (!project) return new NextResponse('Not found', { status: 404 })
 
   const created = await ChatMessageModel.create({ projectId, content, sender })
+  try {
+    await ActivityModel.create({ type: 'comment_added', message: `New chat message in project`, user: sender, projectId })
+  } catch {}
   return NextResponse.json({
     id: created._id.toString(),
     projectId: created.projectId.toString(),

@@ -2,9 +2,9 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { isValidObjectId } from 'mongoose'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel } from '@/lib/models'
+import { ProjectModel, ActivityModel } from '@/lib/models'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   // Prefer middleware context; fallback to bearer verification (dev-friendly)
   let { userId } = await auth()
   if (!userId) {
@@ -19,13 +19,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return new NextResponse('Unauthorized', { status: 401 })
   }
   await dbConnect()
-  if (!isValidObjectId(params.id)) {
+  const { id } = await params
+  if (!isValidObjectId(id)) {
     if (process.env.NODE_ENV !== 'production') {
-      return NextResponse.json({ error: 'Invalid project id format', id: params.id }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid project id format', id }, { status: 400 })
     }
     return new NextResponse('Not found', { status: 404 })
   }
-  const p: any = await ProjectModel.findOne({ _id: params.id, archived: { $ne: true }, $or: [{ ownerId: userId }, { 'members.id': userId }] }).lean()
+  const p: any = await ProjectModel.findOne({ _id: id, archived: { $ne: true }, $or: [{ ownerId: userId }, { 'members.id': userId }] }).lean()
   if (!p) return new NextResponse('Not found', { status: 404 })
   return NextResponse.json({
     id: p._id.toString(),
@@ -46,7 +47,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 import { projectPatchSchema } from '@/lib/validation'
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   // Prefer middleware context; fallback to bearer verification (dev-friendly)
   let { userId } = await auth()
   if (!userId) {
@@ -68,13 +69,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const updates: any = { ...patch }
   if (typeof updates.dueDate === 'string') updates.dueDate = new Date(updates.dueDate)
 
-  if (!isValidObjectId(params.id)) return new NextResponse('Not found', { status: 404 })
+  const { id } = await params
+  if (!isValidObjectId(id)) return new NextResponse('Not found', { status: 404 })
   const updated: any = await ProjectModel.findOneAndUpdate(
-    { _id: params.id, $or: [{ ownerId: userId }, { 'members.id': userId }] },
+    { _id: id, $or: [{ ownerId: userId }, { 'members.id': userId }] },
     { $set: updates },
     { new: true }
   ).lean()
   if (!updated) return new NextResponse('Not found', { status: 404 })
+  try {
+    if (typeof updates.progress === 'number') {
+      await ActivityModel.create({ type: 'project_updated', message: `Progress updated to ${updates.progress}%`, user: { id: userId, name: 'You' } })
+    }
+  } catch {}
   return NextResponse.json({
     id: updated._id.toString(),
     name: updated.name,
@@ -90,7 +97,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   })
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   // Prefer middleware context; fallback to bearer verification (dev-friendly)
   let { userId } = await auth()
   if (!userId) {
@@ -105,10 +112,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     return new NextResponse('Unauthorized', { status: 401 })
   }
   await dbConnect()
-  if (!isValidObjectId(params.id)) return new NextResponse('Not found', { status: 404 })
+  const { id } = await params
+  if (!isValidObjectId(id)) return new NextResponse('Not found', { status: 404 })
   // Soft-archive instead of delete to avoid data loss
   const updated: any = await ProjectModel.findOneAndUpdate(
-    { _id: params.id, ownerId: userId },
+    { _id: id, ownerId: userId },
     { $set: { archived: true } },
     { new: true }
   ).lean()

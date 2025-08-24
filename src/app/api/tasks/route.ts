@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Task } from '@/lib/types'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, TaskModel } from '@/lib/models'
+import { ProjectModel, TaskModel, ActivityModel } from '@/lib/models'
 
 function mapTask(t: any): Task {
   return {
@@ -38,12 +38,26 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const projectIdParam = searchParams.get('projectId') || undefined
 
-  // Only tasks from projects owned by this user
-  const ownedProjects = await ProjectModel.find({ ownerId: userId }).select('_id').lean()
-  const ownedIds = ownedProjects.map((p: any) => p._id)
+  // Build visibility: projects where user is owner or member
+  const visibleProjects = await ProjectModel.find({
+    $or: [{ ownerId: userId }, { 'members.id': userId }],
+  }).select('_id').lean()
+  const visibleIds = visibleProjects.map((p: any) => p._id)
 
-  const query: any = { projectId: { $in: ownedIds } }
-  if (projectIdParam) query.projectId = projectIdParam
+  let query: any
+  if (projectIdParam) {
+    // tasks for a specific project (ensure visibility)
+    query = { $and: [ { projectId: { $in: visibleIds } }, { projectId: projectIdParam } ] }
+  } else {
+    // personal tasks: created by me or assigned to me across visible projects
+    query = {
+      projectId: { $in: visibleIds },
+      $or: [
+        { creatorId: userId },
+        { 'assignee.id': userId },
+      ],
+    }
+  }
 
   const items = await TaskModel.find(query).sort({ updatedAt: -1 }).lean()
   return NextResponse.json(items.map(mapTask))
@@ -85,5 +99,21 @@ export async function POST(req: Request) {
     creatorId: userId,
   })
   await ProjectModel.updateOne({ _id: projectId }, { $inc: { tasksCount: 1 } })
+  // record activity
+  try {
+    await ActivityModel.create({
+      type: 'task_created',
+      message: `Task "${title}" created`,
+      user: assignee?.id ? { id: assignee.id, name: assignee.name, avatar: assignee.avatar } : { id: userId, name: 'You' },
+      projectId,
+    })
+  } catch {}
+  // recompute project progress lazily
+  try {
+    const total = await TaskModel.countDocuments({ projectId })
+    const done = await TaskModel.countDocuments({ projectId, status: 'done' })
+    const progress = total > 0 ? Math.round((done / total) * 100) : 0
+    await ProjectModel.updateOne({ _id: projectId }, { $set: { progress } })
+  } catch {}
   return NextResponse.json(mapTask(createdDoc.toObject()), { status: 201 })
 }

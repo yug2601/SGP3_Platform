@@ -45,8 +45,10 @@ const ActivitySchema = new Schema({
   message: { type: String, required: true },
   time: { type: Date, default: Date.now },
   user: UserRefSchema,
+  projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
 })
 ActivitySchema.index({ time: -1 })
+ActivitySchema.index({ projectId: 1, time: -1 })
 
 const ChatMessageSchema = new Schema({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
