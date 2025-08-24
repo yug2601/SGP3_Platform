@@ -19,7 +19,13 @@ export async function GET(req: Request) {
   }
 
   await dbConnect()
-  const items = await ProjectModel.find({ ownerId: userId }).sort({ updatedAt: -1 }).lean()
+  const items = await ProjectModel.find({
+    archived: { $ne: true },
+    $or: [
+      { ownerId: userId },
+      { 'members.id': userId },
+    ],
+  }).sort({ updatedAt: -1 }).lean()
   const mapped = items.map((p: any) => ({
     id: p._id.toString(),
     name: p.name,
@@ -32,6 +38,8 @@ export async function GET(req: Request) {
     members: p.members || [],
     tasksCount: p.tasksCount || 0,
     ownerId: p.ownerId,
+    archived: !!p.archived,
+    inviteCode: p.inviteCode || undefined,
   }))
   return NextResponse.json(mapped)
 }
@@ -54,7 +62,7 @@ export async function POST(req: Request) {
   const json = await req.json().catch(() => null)
   const parsed = projectCreateSchema.safeParse(json)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.flatten() }, { status: 400 })
-  const { name, description, status, progress, dueDate, members } = parsed.data
+  const { name, description, status, progress, dueDate, members, archived } = parsed.data
 
   await dbConnect()
   const created = await ProjectModel.create({
@@ -66,6 +74,7 @@ export async function POST(req: Request) {
     members,
     tasksCount: 0,
     ownerId: userId,
+    archived: !!archived,
   })
   const mapped: Project = {
     id: created._id.toString(),
@@ -79,6 +88,8 @@ export async function POST(req: Request) {
     members: created.members || [],
     tasksCount: created.tasksCount || 0,
     ownerId: created.ownerId,
-  }
+    archived: !!created.archived,
+    inviteCode: created.inviteCode || undefined,
+  } as any
   return NextResponse.json(mapped, { status: 201 })
 }

@@ -1,14 +1,8 @@
-# Togetherflow App
-
-A Next.js 15 (App Router) application using React 19, Tailwind CSS 4, Clerk for authentication, and MongoDB (Mongoose) for data.
-
----
-
-## Setup Guide (Clone/Fork → Run Locally)
+# Togetherflow App — Setup Guide (Clone/Fork → Run Locally)
 
 This guide explains how to fork/clone the repository and run the app on your device.
 
-### 1) Prerequisites
+## 1) Prerequisites
 - **Git**: https://git-scm.com
 - **Node.js**: Version 20+ (LTS recommended). Verify:
   ```bash
@@ -19,7 +13,7 @@ This guide explains how to fork/clone the repository and run the app on your dev
 - **Clerk account**: Get keys at https://dashboard.clerk.com
 - **MongoDB (for full features)**: MongoDB Atlas (free) or local MongoDB. Get a connection string.
 
-### 2) Fork or Clone
+## 2) Fork or Clone
 - **Fork (recommended for contributions)**
   1. Open the GitHub repo in your browser
   2. Click **Fork** → choose your account/org
@@ -37,7 +31,7 @@ Then change directory to the app root:
 cd <repo-root>/togetherflow-app
 ```
 
-### 3) Install Dependencies
+## 3) Install Dependencies
 Using npm:
 ```bash
 npm install
@@ -58,7 +52,7 @@ Using Yarn (optional):
 yarn install
 ```
 
-### 4) Environment Variables
+## 4) Environment Variables
 Create `.env.local` inside `togetherflow-app/` with:
 ```bash
 # Clerk (required)
@@ -72,7 +66,7 @@ Notes:
 - **Clerk keys**: From Clerk dashboard → your project → API Keys.
 - **MongoDB URI**: From Atlas (or local). Without this, data features and API routes may not work fully.
 
-### 5) Run the App (Development)
+## 5) Run the App (Development)
 From `togetherflow-app/`:
 ```bash
 npm run dev
@@ -82,21 +76,21 @@ Open http://localhost:3000
 - Public routes: `/`, `/about`, `/help`, `/privacy`, `/sign-in`, `/sign-up`
 - Other routes are protected by Clerk.
 
-### 6) Optional: Test DB Connectivity
+## 6) Optional: Test DB Connectivity
 From `togetherflow-app/`:
 ```bash
 npm run db:test
 ```
 This verifies MongoDB connectivity (requires `MONGODB_URI`).
 
-### 7) Build and Run (Production)
+## 7) Build and Run (Production)
 ```bash
 npm run build
 npm start
 ```
 The app runs at http://localhost:3000.
 
-### 8) Deploy (Optional, Vercel)
+## 8) Deploy (Optional, Vercel)
 - Push your repo (or keep your fork)
 - Import the repo into Vercel
 - Set env vars:
@@ -105,7 +99,7 @@ The app runs at http://localhost:3000.
   - `MONGODB_URI`
 - Deploy
 
-### 9) Troubleshooting
+## 9) Troubleshooting
 - **Node version errors**: Use Node 20+. Reinstall deps:
   ```bash
   rm -rf node_modules package-lock.json
@@ -129,7 +123,7 @@ The app runs at http://localhost:3000.
   npm run dev
   ```
 
-### 10) Project Structure (Key Paths)
+## 10) Project Structure (Key Paths)
 - **App root**: `togetherflow-app/`
 - **App Router**: `src/app`
 - **Components**: `src/components` (UI in `src/components/ui`)
@@ -139,65 +133,4 @@ The app runs at http://localhost:3000.
 
 ---
 
-## Getting Started (Quick)
-
-1) Install dependencies
-```bash
-npm install
-```
-
-2) Configure environment variables in `.env.local`
-```bash
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority&appName=<appName>
-```
-
-3) Run the development server
-```bash
-npm run dev
-```
-Open http://localhost:3000
-
-Public routes: `/`, `/about`, `/help`, `/privacy`, `/sign-in`, `/sign-up`
-All other routes are protected by Clerk.
-
-### MongoDB Atlas quick setup
-- Create a free cluster at MongoDB Atlas
-- Create a DB user and allow your IP (or 0.0.0.0/0 for dev)
-- Get the driver connection string and set `MONGODB_URI` above
-
-### Seed demo data (dev-only)
-- With the dev server running and after setting MONGODB_URI:
-  - POST http://localhost:3000/api/dev/seed (e.g., via curl or REST client)
-- It creates sample projects, tasks, notifications, activity, and chat messages
-
-### Realtime chat
-- Socket.IO namespace at `/api/socketio`
-- The app initializes the bridge when you open the Chat page
-
-### Scripts
-- `npm run dev` – start dev server
-- `npm run build` – build
-- `npm start` – run production build
-- `npm run lint` – lint
-
-### Notes
-- Tech: Next.js App Router, React 19, Tailwind CSS 4, Clerk, Mongoose
-- DB models: see `src/lib/models.ts`
-- API routes: see `src/app/api/*`
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If anything is unclear or you hit issues, please open an issue or reach out.

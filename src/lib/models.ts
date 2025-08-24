@@ -11,8 +11,11 @@ const ProjectSchema = new Schema({
   members: { type: [UserRefSchema], default: [] },
   tasksCount: { type: Number, default: 0 },
   ownerId: { type: String, required: true },
+  archived: { type: Boolean, default: false },
+  inviteCode: { type: String },
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 ProjectSchema.index({ ownerId: 1, updatedAt: -1 })
+ProjectSchema.index({ inviteCode: 1 }, { unique: false, sparse: true })
 
 const TaskSchema = new Schema({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },

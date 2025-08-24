@@ -101,8 +101,9 @@ export default function ChatPage() {
       try {
         const { io } = await import('socket.io-client')
         const s = io({ path: '/api/socketio' })
-        s.emit('chat:send', { projectId: selectedProjectId, content: created.content, sender: created.sender })
-        setTimeout(() => s.disconnect(), 400)
+        // Broadcast the already-saved message to peers
+        s.emit('chat:broadcast', created)
+        setTimeout(() => s.disconnect(), 300)
       } catch {}
     } catch {}
   }

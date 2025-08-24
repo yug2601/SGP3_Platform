@@ -19,7 +19,7 @@ import {
 import { api } from "@/lib/api"
 import type { Project } from "@/lib/types"
 import { useToast } from "@/components/ui/toast"
-import { useAuth, useClerk } from "@clerk/nextjs"
+import { useAuth, useClerk, useUser } from "@clerk/nextjs"
 
 const ProjectListItem = memo(function ProjectListItem({ project, index }: { project: Project, index: number }) {
   return (
@@ -41,6 +41,7 @@ const ProjectListItem = memo(function ProjectListItem({ project, index }: { proj
 
 export default function ProjectsPage() {
   const { isSignedIn, getToken } = useAuth()
+  const { user } = useUser()
   const { openSignIn, signOut } = useClerk()
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -52,6 +53,7 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [newProject, setNewProject] = useState({ name: "", description: "" })
+  const [joinCode, setJoinCode] = useState("")
   const { show, Toast } = useToast()
 
   const load = useCallback(async () => {
@@ -91,7 +93,7 @@ export default function ProjectsPage() {
     return projects.filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(q) || project.description.toLowerCase().includes(q)
       const matchesFilter = filterStatus === "all" || project.status === filterStatus
-      return matchesSearch && matchesFilter
+      return matchesSearch && matchesFilter && !project.archived
     })
   }, [projects, debounced, filterStatus])
 
@@ -350,6 +352,27 @@ export default function ProjectsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Join by Code (quick action at bottom right) */}
+      <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-background/90 backdrop-blur rounded-xl border p-2 shadow">
+        <Input placeholder="Join code" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} className="w-40"/>
+        <Button onClick={async () => {
+          if (!joinCode.trim()) return
+          if (!user) return openSignIn({ afterSignInUrl: '/projects', redirectUrl: '/projects' })
+          try {
+            const member = {
+              id: user.id,
+              name: user.fullName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Member',
+              avatar: user.imageUrl,
+            }
+            await api('/api/projects/join', { method: 'POST', body: JSON.stringify({ code: joinCode.trim(), member }) })
+            setJoinCode('')
+            await load()
+          } catch {
+            // ignore toast for now
+          }
+        }}>Join</Button>
+      </div>
     </div>
   )
 }

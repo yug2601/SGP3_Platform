@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Server as IOServer } from 'socket.io'
 import type { Server as HTTPServer } from 'http'
-import { dbConnect } from '@/lib/db'
-import { ChatMessageModel } from '@/lib/models'
 
 export const config = {
   api: {
@@ -28,21 +26,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         try { socket.join(room) } catch {}
       })
 
-      socket.on('chat:send', async (payload: { projectId: string, content: string, sender: { id: string, name: string, avatar?: string } }) => {
+      // Broadcast a message to all clients in the project's room.
+      // The client should already have persisted the message via REST.
+      socket.on('chat:broadcast', (message: { id: string, projectId: string, content: string, sender: { id: string, name: string, avatar?: string }, timestamp: string }) => {
         try {
-          const { projectId, content, sender } = payload || {} as any
-          if (!projectId || !content || !sender?.id || !sender?.name) return
-          await dbConnect()
-          const created = await ChatMessageModel.create({ projectId, content, sender })
-          const saved = {
-            id: created._id.toString(),
-            projectId: created.projectId.toString(),
-            content: created.content,
-            sender: created.sender,
-            timestamp: created.timestamp.toISOString(),
-          }
-          const room = `project:${projectId}`
-          io.to(room).emit('chat:message', saved)
+          if (!message?.projectId || !message?.id || !message?.content || !message?.sender?.id || !message?.sender?.name || !message?.timestamp) return
+          const room = `project:${message.projectId}`
+          io.to(room).emit('chat:message', message)
         } catch {
           // ignore
         }

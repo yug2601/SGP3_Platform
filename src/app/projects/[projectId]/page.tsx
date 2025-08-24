@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import dynamic from "next/dynamic"
-const TaskCard = dynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
-const ChatMessage = dynamic(() => import("@/components/ChatMessage").then(m => m.ChatMessage), { ssr: false })
+import nextDynamic from "next/dynamic"
+const TaskCard = nextDynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
+const ChatMessage = nextDynamic(() => import("@/components/ChatMessage").then(m => m.ChatMessage), { ssr: false })
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
 import { ProgressiveList } from "@/components/ProgressiveList"
@@ -21,6 +21,7 @@ const statusColors = {
   "on-hold": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
 }
 
+export const dynamic = 'force-dynamic'
 export default function ProjectDetailPage({ params: paramsPromise }: { params: Promise<{ projectId: string }> }) {
   const params = use(paramsPromise)
   const [activeTab, setActiveTab] = useState("overview")
@@ -91,11 +92,11 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
       })
       setMessages(prev => prev.map(m => m.id === optimistic.id ? created : m))
       try {
-        // also emit realtime event if socket is connected (server will broadcast to room)
+        // Broadcast the saved message to peers (server does not persist again)
         const { io } = await import('socket.io-client')
         const s = io({ path: '/api/socketio' })
-        s.emit('chat:send', { projectId: params.projectId, content: created.content, sender: created.sender })
-        setTimeout(() => s.disconnect(), 500)
+        s.emit('chat:broadcast', created)
+        setTimeout(() => s.disconnect(), 300)
       } catch {}
     } catch {
       // ignore
@@ -139,11 +140,22 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={async () => {
+            const name = prompt('Project name', project.name)
+            if (!name) return
+            const description = prompt('Description', project.description || '') || ''
+            const patch: Partial<Project> = { name, description }
+            const updated = await api<Project>(`/api/projects/${project.id}`, { method: 'PATCH', body: JSON.stringify(patch) })
+            setProject(updated)
+          }}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={async () => {
+            if (!confirm('Archive this project? You can restore later via database.')) return
+            await api(`/api/projects/${project.id}`, { method: 'DELETE' })
+            window.location.href = '/projects'
+          }}>
             <Archive className="h-4 w-4 mr-2" />
             Archive
           </Button>
@@ -231,6 +243,26 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                 <CardTitle>Team Members</CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="flex gap-2 mb-4">
+                  <Button variant="outline" onClick={async () => {
+                    const email = prompt('Invite by email')
+                    if (!email) return
+                    await api(`/api/projects/${project.id}/members`, { method: 'POST', body: JSON.stringify({ email }) })
+                    const refreshed = await api<Project>(`/api/projects/${project.id}`)
+                    setProject(refreshed)
+                  }}>Add by Email</Button>
+                  <Button variant="outline" onClick={async () => {
+                    const res = await api<{ inviteCode: string }>(`/api/projects/${project.id}/invite`, { method: 'POST' })
+                    navigator.clipboard?.writeText(res.inviteCode).catch(() => {})
+                    alert(`Invite code: ${res.inviteCode} (copied)`)
+                  }}>Generate Invite Code</Button>
+                  <Button variant="outline" onClick={async () => {
+                    const code = prompt('Enter invite code to join this project from another account')
+                    if (!code) return
+                    // no-op here; joining occurs on the other account via /api/projects/join
+                    alert('Share code with your teammate. They can use /projects -> Join with code UI (coming)')
+                  }}>Join by Code</Button>
+                </div>
                 <div className="space-y-3">
                   {project.members.map((member, index) => (
                     <motion.div
@@ -243,7 +275,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={member.avatar} />
                         <AvatarFallback>
-                          {member.name.split(" ").map(n => n[0]).join("")}
+                          {member.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>

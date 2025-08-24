@@ -22,6 +22,7 @@ export const projectCreateSchema = z.object({
   progress: z.number().int().min(0).max(100).optional().default(0),
   dueDate: isoDateString.optional(),
   members: z.array(userRefSchema).optional().default([]),
+  archived: z.boolean().optional().default(false),
 })
 
 export const projectPatchSchema = z.object({
@@ -31,6 +32,7 @@ export const projectPatchSchema = z.object({
   progress: z.number().int().min(0).max(100).optional(),
   dueDate: isoDateString.nullable().optional(),
   members: z.array(userRefSchema).optional(),
+  archived: z.boolean().optional(),
 })
 
 export const taskCreateSchema = z.object({

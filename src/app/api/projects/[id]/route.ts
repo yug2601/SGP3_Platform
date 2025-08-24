@@ -1,7 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { isValidObjectId } from 'mongoose'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, TaskModel, ChatMessageModel } from '@/lib/models'
+import { ProjectModel } from '@/lib/models'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   // Prefer middleware context; fallback to bearer verification (dev-friendly)
@@ -17,12 +18,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
     return new NextResponse('Unauthorized', { status: 401 })
   }
-  //error here
   await dbConnect()
-  const p: any = await ProjectModel.findOne({ _id: params.id, ownerId: userId }).lean()
+  if (!isValidObjectId(params.id)) {
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ error: 'Invalid project id format', id: params.id }, { status: 400 })
+    }
+    return new NextResponse('Not found', { status: 404 })
+  }
+  const p: any = await ProjectModel.findOne({ _id: params.id, archived: { $ne: true }, $or: [{ ownerId: userId }, { 'members.id': userId }] }).lean()
   if (!p) return new NextResponse('Not found', { status: 404 })
   return NextResponse.json({
-//till here
     id: p._id.toString(),
     name: p.name,
     description: p.description,
@@ -34,6 +39,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     members: p.members || [],
     tasksCount: p.tasksCount || 0,
     ownerId: p.ownerId,
+    archived: !!p.archived,
+    inviteCode: p.inviteCode || undefined,
   })
 }
 
@@ -61,8 +68,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const updates: any = { ...patch }
   if (typeof updates.dueDate === 'string') updates.dueDate = new Date(updates.dueDate)
 
+  if (!isValidObjectId(params.id)) return new NextResponse('Not found', { status: 404 })
   const updated: any = await ProjectModel.findOneAndUpdate(
-    { _id: params.id, ownerId: userId },
+    { _id: params.id, $or: [{ ownerId: userId }, { 'members.id': userId }] },
     { $set: updates },
     { new: true }
   ).lean()
@@ -97,10 +105,13 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     return new NextResponse('Unauthorized', { status: 401 })
   }
   await dbConnect()
-  // delete tasks + chat for the project, then project
-  await TaskModel.deleteMany({ projectId: params.id as any })
-  await ChatMessageModel.deleteMany({ projectId: params.id as any })
-  const res = await ProjectModel.deleteOne({ _id: params.id, ownerId: userId })
-  if (!res.deletedCount) return new NextResponse('Not found', { status: 404 })
-  return new NextResponse(null, { status: 204 })
+  if (!isValidObjectId(params.id)) return new NextResponse('Not found', { status: 404 })
+  // Soft-archive instead of delete to avoid data loss
+  const updated: any = await ProjectModel.findOneAndUpdate(
+    { _id: params.id, ownerId: userId },
+    { $set: { archived: true } },
+    { new: true }
+  ).lean()
+  if (!updated) return new NextResponse('Not found', { status: 404 })
+  return NextResponse.json({ archived: true })
 }

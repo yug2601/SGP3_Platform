@@ -22,6 +22,8 @@ export interface Project {
   members: UserRef[]
   tasksCount: number
   ownerId: string // Clerk user id
+  archived?: boolean
+  inviteCode?: string
 }
 
 export interface Task {
