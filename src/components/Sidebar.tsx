@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  CalendarDays,
 } from "lucide-react"
 import { useUIStore } from "@/lib/zustand"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: FolderOpen, label: "Projects", href: "/projects" },
   { icon: CheckSquare, label: "Tasks", href: "/tasks" },
+  { icon: CalendarDays, label: "Calendar", href: "/calendar" },
   { icon: MessageCircle, label: "Chat", href: "/chat" },
   { icon: Bell, label: "Notifications", href: "/notifications" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },

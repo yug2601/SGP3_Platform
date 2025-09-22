@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     "http://127.0.0.1:3000",
     "http://10.224.128.55:3000",
   ],
+  // Enable standalone output for Docker deployments (good for Render)
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
