@@ -69,6 +69,29 @@ const UserSchema = new Schema({
   name: { type: String },
   imageUrl: { type: String },
   roles: { type: [String], default: ['member'] },
+  // Personal Information
+  bio: { type: String, default: '' },
+  firstName: { type: String, default: '' },
+  lastName: { type: String, default: '' },
+  // Preferences
+  theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+  timezone: { type: String, default: 'UTC' },
+  // Notification Preferences
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: false },
+    weeklyDigest: { type: Boolean, default: true },
+    projectUpdates: { type: Boolean, default: true },
+    taskReminders: { type: Boolean, default: true },
+    teamInvites: { type: Boolean, default: true }
+  },
+  // Statistics
+  stats: {
+    projectsCreated: { type: Number, default: 0 },
+    tasksCompleted: { type: Number, default: 0 },
+    teamCollaborations: { type: Number, default: 0 },
+    messagesSent: { type: Number, default: 0 }
+  }
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 
 export const UserModel = models.User || model('User', UserSchema)

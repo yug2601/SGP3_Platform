@@ -81,3 +81,40 @@ export interface ChatMessageItem {
   sender: UserRef
   timestamp: string // ISO
 }
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system'
+  timezone: string
+}
+
+export interface NotificationSettings {
+  emailNotifications: boolean
+  pushNotifications: boolean
+  weeklyDigest: boolean
+  projectUpdates: boolean
+  taskReminders: boolean
+  teamInvites: boolean
+}
+
+export interface UserStats {
+  projectsCreated: number
+  tasksCompleted: number
+  teamCollaborations: number
+  messagesSent: number
+}
+
+export interface UserProfile {
+  id: ID
+  clerkId: string
+  email?: string
+  name?: string
+  imageUrl?: string
+  bio?: string
+  firstName?: string
+  lastName?: string
+  preferences: UserPreferences
+  notificationSettings: NotificationSettings
+  stats: UserStats
+  createdAt: string
+  updatedAt: string
+}
