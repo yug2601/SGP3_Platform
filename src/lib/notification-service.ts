@@ -56,6 +56,24 @@ export class NotificationService {
 
       await notification.save()
 
+      // Broadcast notification in real-time via Socket.IO
+      if (typeof global !== 'undefined' && (global as any).socketIo) {
+        const io = (global as any).socketIo
+        const notificationData = {
+          id: notification._id.toString(),
+          userId: notification.userId,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          isRead: false,
+          time: notification.time.toISOString(),
+          sender: notification.sender
+        }
+        
+        // Send to user-specific room
+        io.to(`user:${data.userId}`).emit('new-notification', notificationData)
+      }
+
       // Log the notification activity
       await ActivityLogger.log({
         type: 'notification_sent',

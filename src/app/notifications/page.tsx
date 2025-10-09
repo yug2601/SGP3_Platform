@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, memo } from "react"
+import React, { useMemo, useState, memo } from "react"
 import { motion } from "@/components/motion"
 import { 
   Bell, 
@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { api } from "@/lib/api"
+import { useNotifications } from "@/lib/hooks/useNotifications"
 import type { Notification } from "@/lib/types"
 
 const getNotificationIcon = (type: string) => {
@@ -136,16 +136,21 @@ const NotificationItem = memo(function NotificationItem({ notification, index, o
 })
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const {
+    notifications,
+    loading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    archiveNotification,
+  } = useNotifications()
+  
   const [filter, setFilter] = useState<"all" | "unread">("all")
   const [search, setSearch] = useState("")
   const [debounced, setDebounced] = useState("")
 
-  useEffect(() => {
-    api<Notification[]>("/api/notifications").then(setNotifications).catch(() => {})
-  }, [])
-
-  useEffect(() => {
+  // Use useEffect instead of useMemo for side effects
+  React.useEffect(() => {
     const id = setTimeout(() => setDebounced(search), 200)
     return () => clearTimeout(id)
   }, [search])
@@ -156,24 +161,6 @@ export default function NotificationsPage() {
     const inText = notification.title.toLowerCase().includes(q) || notification.message.toLowerCase().includes(q)
     return inText
   }), [notifications, filter, debounced])
-
-  const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications])
-
-  const markAsRead = async (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
-    await api<Notification>(`/api/notifications/${id}`, { method: 'PATCH' }).catch(() => {})
-  }
-
-  const markAllAsRead = async () => {
-    const unread = notifications.filter(n => !n.isRead)
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-    await Promise.all(unread.map(n => api(`/api/notifications/${n.id}`, { method: 'PATCH' }).catch(() => {})))
-  }
-
-  const archiveNotification = async (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    await api(`/api/notifications/${id}`, { method: 'DELETE' }).catch(() => {})
-  }
 
   return (
     <div className="space-y-6">
@@ -230,7 +217,14 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading notifications...</p>
+            </CardContent>
+          </Card>
+        ) : filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

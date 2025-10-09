@@ -19,6 +19,12 @@ const eslintConfig = [
       "@typescript-eslint/no-empty-object-type": "off",
       "@next/next/no-async-client-component": "off"
     }
+  },
+  {
+    files: ["server.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
+    }
   }
 ];
 

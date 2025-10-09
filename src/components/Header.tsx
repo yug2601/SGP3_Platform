@@ -3,6 +3,7 @@
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 import { Menu, Sparkles } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { NotificationBadge } from "@/components/NotificationBadge"
 import { Button } from "@/components/ui/button"
 import { useUIStore } from "@/lib/zustand"
 
@@ -50,6 +51,7 @@ export function Header() {
             </SignInButton>
           </SignedOut>
           <SignedIn>
+            <NotificationBadge />
             <UserButton
               appearance={{
                 elements: {

@@ -21,17 +21,35 @@ app.prepare().then(() => {
     }
   });
 
-  // Socket.IO event handlers (customize as needed)
+  // Socket.IO event handlers
   io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    // Example: Handle join room
+    // Handle user joining their notification room
+    socket.on('join-user-room', (userId) => {
+      socket.join(`user:${userId}`);
+      console.log(`User ${socket.id} joined notification room for user ${userId}`);
+    });
+
+    // Handle user joining project room
+    socket.on('join-project', (projectId) => {
+      socket.join(`project:${projectId}`);
+      console.log(`User ${socket.id} joined project room ${projectId}`);
+    });
+
+    // Handle user leaving project room
+    socket.on('leave-project', (projectId) => {
+      socket.leave(`project:${projectId}`);
+      console.log(`User ${socket.id} left project room ${projectId}`);
+    });
+
+    // Legacy: Handle join room
     socket.on('join-room', (roomId) => {
       socket.join(roomId);
       console.log(`User ${socket.id} joined room ${roomId}`);
     });
 
-    // Example: Handle chat message
+    // Handle chat message
     socket.on('send-message', (data) => {
       io.to(data.roomId).emit('receive-message', data);
     });
@@ -40,6 +58,9 @@ app.prepare().then(() => {
       console.log('A user disconnected:', socket.id);
     });
   });
+
+  // Make io globally available for notification service
+  global.socketIo = io;
 
   const port = process.env.PORT || 3000;
   server.listen(port, (err) => {

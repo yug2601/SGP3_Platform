@@ -20,3 +20,20 @@ export async function GET() {
   }))
   return NextResponse.json(items)
 }
+
+export async function PATCH() {
+  const { userId } = await auth()
+  if (!userId) return new NextResponse('Unauthorized', { status: 401 })
+  
+  try {
+    await dbConnect()
+    await NotificationModel.updateMany(
+      { userId, isRead: false },
+      { $set: { isRead: true } }
+    )
+    return NextResponse.json({ success: true, message: 'All notifications marked as read' })
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error)
+    return NextResponse.json({ error: 'Failed to mark notifications as read' }, { status: 500 })
+  }
+}

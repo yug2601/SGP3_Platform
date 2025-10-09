@@ -5,6 +5,8 @@ import { ThemeProvider } from 'next-themes'
 import { motion, AnimatePresence } from '@/components/motion'
 import { usePathname } from 'next/navigation'
 import { useUIStore } from '@/lib/zustand'
+import { SignedIn } from '@clerk/nextjs'
+import { NotificationToast } from '@/components/NotificationToast'
 
 const Header = dynamic(() => import('@/components/Header').then(m => m.Header), { ssr: false })
 const Sidebar = dynamic(() => import('@/components/Sidebar').then(m => m.Sidebar), { ssr: false })
@@ -47,6 +49,11 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
           </motion.main>
         </div>
         <Footer />
+        
+        {/* Real-time notification toasts - only for signed-in users */}
+        <SignedIn>
+          <NotificationToast />
+        </SignedIn>
       </div>
     </ThemeProvider>
   )

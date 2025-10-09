@@ -1,7 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, TaskModel, ActivityModel } from '@/lib/models'
+import { ProjectModel, TaskModel, ActivityModel, UserModel } from '@/lib/models'
+import { NotificationService } from '@/lib/notification-service'
 
 function map(t: any) {
   return {
@@ -35,15 +36,71 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof updates.dueDate === 'string') updates.dueDate = new Date(updates.dueDate)
   const updated: any = await TaskModel.findByIdAndUpdate(resolvedParams.id, { $set: updates }, { new: true }).lean()
   if (!updated) return new NextResponse('Not found', { status: 404 })
-  // record activity for status/assignee change
+  
+  // Get current user info for notifications
+  const currentUser = await UserModel.findOne({ clerkId: userId }).lean()
+  const userRef = currentUser ? {
+    id: (currentUser as any).clerkId,
+    name: (currentUser as any).name || 'Unknown User',
+    avatar: (currentUser as any).imageUrl
+  } : { id: userId, name: 'Unknown User' }
+  
+  // record activity for status/assignee change and send notifications
   try {
     if (typeof updates.status === 'string') {
-      await ActivityModel.create({ type: 'task_updated', message: `Task \"${updated.title}\" marked ${updates.status}`, user: { id: userId, name: 'You' }, projectId: updated.projectId })
+      await ActivityModel.create({ 
+        type: 'task_updated', 
+        message: `Task "${updated.title}" marked ${updates.status}`, 
+        user: userRef, 
+        userId: userId,
+        projectId: updated.projectId,
+        taskId: updated._id
+      })
+      
+      // Send notification for task completion
+      if (updates.status === 'done') {
+        const projectDoc = await ProjectModel.findById(updated.projectId).lean()
+        if (projectDoc) {
+          // Notify all project members about task completion
+          const memberIds = ((projectDoc as any).members || [])
+            .map((m: any) => m.id)
+            .filter((id: string) => id !== userId) // Don't notify the person who completed it
+          
+          if (memberIds.length > 0) {
+            await NotificationService.notifyTaskCompletion(
+              memberIds,
+              updated.title,
+              updated._id.toString(),
+              updated.projectId.toString(),
+              userRef
+            )
+          }
+        }
+      }
     }
-    if (updates.assignee?.id) {
-      await ActivityModel.create({ type: 'task_updated', message: `Task \"${updated.title}\" assigned to ${updates.assignee.name}`, user: { id: userId, name: 'You' }, projectId: updated.projectId })
+    
+    if (updates.assignee?.id && updates.assignee.id !== userId) {
+      await ActivityModel.create({ 
+        type: 'task_updated', 
+        message: `Task "${updated.title}" assigned to ${updates.assignee.name}`, 
+        user: userRef, 
+        userId: userId,
+        projectId: updated.projectId,
+        taskId: updated._id
+      })
+      
+      // Send notification to the assignee
+      await NotificationService.notifyTaskAssignment(
+        updates.assignee.id,
+        updated.title,
+        updated._id.toString(),
+        updated.projectId.toString(),
+        userRef
+      )
     }
-  } catch {}
+  } catch (error) {
+    console.error('Error recording activity or sending notifications:', error)
+  }
   // recompute project progress lazily after update
   try {
     const total = await TaskModel.countDocuments({ projectId: updated.projectId })

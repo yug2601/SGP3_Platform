@@ -2,7 +2,8 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Task } from '@/lib/types'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, TaskModel } from '@/lib/models'
+import { ProjectModel, TaskModel, UserModel } from '@/lib/models'
+import { NotificationService } from '@/lib/notification-service'
 
 function mapTask(t: any): Task {
   return {
@@ -99,12 +100,36 @@ export async function POST(req: Request) {
     creatorId: userId,
   })
   await ProjectModel.updateOne({ _id: projectId }, { $inc: { tasksCount: 1 } })
+  
+  // Get current user info for notifications
+  const currentUser = await UserModel.findOne({ clerkId: userId }).lean()
+  const userRef = currentUser ? {
+    id: (currentUser as any).clerkId,
+    name: (currentUser as any).name || 'Unknown User',
+    avatar: (currentUser as any).imageUrl
+  } : { id: userId, name: 'Unknown User' }
+  
   // Log task creation activity
   try {
     const { ActivityLogger } = await import('@/lib/activity-logger')
     await ActivityLogger.logTask('created', title, createdDoc._id.toString(), projectId, userId)
   } catch (error) {
     console.error('Failed to log task creation activity:', error)
+  }
+  
+  // Send notification if task is assigned to someone other than creator
+  try {
+    if (assignee && assignee.id && assignee.id !== userId) {
+      await NotificationService.notifyTaskAssignment(
+        assignee.id,
+        title,
+        createdDoc._id.toString(),
+        projectId,
+        userRef
+      )
+    }
+  } catch (error) {
+    console.error('Failed to send task assignment notification:', error)
   }
   // recompute project progress lazily
   try {

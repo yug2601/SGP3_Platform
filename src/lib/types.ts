@@ -103,6 +103,103 @@ export interface UserStats {
   messagesSent: number
 }
 
+// Extended Analytics Types
+export interface AnalyticsTimeframe {
+  label: string
+  value: '24h' | '7d' | '30d' | '90d' | '1y'
+}
+
+export interface AnalyticsMetric {
+  current: number
+  previous: number
+  change: number
+  changePercent: number
+  trend: 'up' | 'down' | 'stable'
+}
+
+export interface ActivityDataPoint {
+  timestamp: string
+  value: number
+  label?: string
+}
+
+export interface TaskAnalytics {
+  totalTasks: AnalyticsMetric
+  completedTasks: AnalyticsMetric
+  inProgressTasks: AnalyticsMetric
+  overdueTask: AnalyticsMetric
+  completionRate: AnalyticsMetric
+  avgCompletionTime: AnalyticsMetric
+  tasksByStatus: { status: string; count: number; percentage: number }[]
+  tasksByPriority: { priority: string; count: number; percentage: number }[]
+  dailyActivity: ActivityDataPoint[]
+  weeklyTrend: ActivityDataPoint[]
+}
+
+export interface ProjectAnalytics {
+  totalProjects: AnalyticsMetric
+  activeProjects: AnalyticsMetric
+  completedProjects: AnalyticsMetric
+  projectsByStatus: { status: string; count: number; percentage: number }[]
+  teamProductivity: ActivityDataPoint[]
+  resourceAllocation: { name: string; value: number; color: string }[]
+}
+
+export interface UserAnalytics {
+  activeUsers: AnalyticsMetric
+  newUsers: AnalyticsMetric
+  userRetention: AnalyticsMetric
+  userEngagement: AnalyticsMetric
+  userActivity: ActivityDataPoint[]
+  usersByRole: { role: string; count: number; percentage: number }[]
+  topContributors: { id: string; name: string; contributions: number; avatar?: string }[]
+}
+
+export interface SystemAnalytics {
+  responseTime: AnalyticsMetric
+  uptime: AnalyticsMetric
+  errorRate: AnalyticsMetric
+  apiCalls: AnalyticsMetric
+  storageUsed: AnalyticsMetric
+  performanceMetrics: ActivityDataPoint[]
+  errorsByType: { type: string; count: number; percentage: number }[]
+}
+
+export interface CollaborationAnalytics {
+  totalMessages: AnalyticsMetric
+  activeChats: AnalyticsMetric
+  fileShares: AnalyticsMetric
+  meetingsHeld: AnalyticsMetric
+  communicationTrend: ActivityDataPoint[]
+  channelActivity: { channel: string; messages: number; users: number }[]
+}
+
+export interface FinancialAnalytics {
+  revenue: AnalyticsMetric
+  expenses: AnalyticsMetric
+  profit: AnalyticsMetric
+  budgetUtilization: AnalyticsMetric
+  revenueByProject: { project: string; revenue: number; percentage: number }[]
+  expensesByCategory: { category: string; amount: number; percentage: number }[]
+  monthlyTrend: ActivityDataPoint[]
+}
+
+export interface DashboardAnalytics {
+  overview: {
+    totalUsers: number
+    totalProjects: number
+    totalTasks: number
+    revenue: number
+  }
+  tasks: TaskAnalytics
+  projects: ProjectAnalytics
+  users: UserAnalytics
+  system: SystemAnalytics
+  collaboration: CollaborationAnalytics
+  financial?: FinancialAnalytics
+  lastUpdated: string
+}
+
 export interface UserProfile {
   id: ID
   clerkId: string
