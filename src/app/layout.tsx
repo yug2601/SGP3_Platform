@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { LayoutContent } from '@/components/LayoutContent'
+import ClerkErrorBoundary from '@/components/ClerkErrorBoundary'
 import './globals.css'
 
 const geistSans = Geist({
@@ -24,19 +25,34 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  
+  if (!publishableKey) {
+    console.error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY environment variable')
+    throw new Error('Missing Clerk publishable key')
+  }
+
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      afterSignInUrl="/"
-      afterSignUpUrl="/"
-    >
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <LayoutContent>{children}</LayoutContent>
-        </body>
-      </html>
-    </ClerkProvider>
+    <ClerkErrorBoundary>
+      <ClerkProvider
+        publishableKey={publishableKey}
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+        afterSignInUrl="/"
+        afterSignUpUrl="/"
+        appearance={{
+          baseTheme: undefined,
+          elements: {
+            formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
+          },
+        }}
+      >
+        <html lang="en" suppressHydrationWarning>
+          <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+            <LayoutContent>{children}</LayoutContent>
+          </body>
+        </html>
+      </ClerkProvider>
+    </ClerkErrorBoundary>
   )
 }

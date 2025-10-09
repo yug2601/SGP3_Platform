@@ -47,7 +47,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
         if (!cancelled) setMessages(m)
       } catch { if (!cancelled) setMessages([]) }
       try {
-        const me = await api<{ name: string }>(`/api/me`).catch(() => ({ name: 'You' }))
+        const me = await api<{ name: string }>(`/api/auth/me`).catch(() => ({ name: 'You' }))
         if (!cancelled) setCurrentUserName(me.name || 'You')
       } catch {}
     })()
@@ -55,25 +55,34 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
   }, [params.projectId])
 
   useEffect(() => {
-    // Initialize Socket.IO client for realtime chat
-    let socket: any
-    ;(async () => {
+    // Real-time chat updates via polling with activity detection
+    let isActive = true
+    
+    const poll = async () => {
+      if (!isActive) return
       try {
-        // Ensure server side socket is ready
-        await fetch('/api/socketio')
-        const { io } = await import('socket.io-client')
-        socket = io({ path: '/api/socketio' })
-        const room = `project:${params.projectId}`
-        socket.emit('join', room)
-        socket.on('chat:message', (msg: ChatMessageItem) => {
-          if (msg.projectId === params.projectId) {
-            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
-          }
+        const m = await api<ChatMessageItem[]>(`/api/chat/${params.projectId}`)
+        setMessages(prev => {
+          const hasNewMessages = m.length > prev.length || 
+            m.some(msg => !prev.find(p => p.id === msg.id))
+          return hasNewMessages ? m : prev
         })
       } catch {}
-    })()
+    }
+    
+    // Poll immediately when page becomes active
+    const handleVisibilityChange = () => {
+      isActive = !document.hidden
+      if (isActive) poll()
+    }
+    
+    // Start polling
+    const interval = setInterval(poll, 15000) // Poll every 15 seconds
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
     return () => {
-      try { socket?.disconnect?.() } catch {}
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [params.projectId])
 
@@ -112,13 +121,6 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
         body: JSON.stringify({ content: optimistic.content, sender: optimistic.sender })
       })
       setMessages(prev => prev.map(m => m.id === optimistic.id ? created : m))
-      try {
-        // Broadcast the saved message to peers (server does not persist again)
-        const { io } = await import('socket.io-client')
-        const s = io({ path: '/api/socketio' })
-        s.emit('chat:broadcast', created)
-        setTimeout(() => s.disconnect(), 300)
-      } catch {}
     } catch {
       // ignore
     }

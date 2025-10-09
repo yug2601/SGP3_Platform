@@ -2,7 +2,7 @@ import { auth, getAuth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Project } from '@/lib/types'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, ActivityModel } from '@/lib/models'
+import { ProjectModel } from '@/lib/models'
 
 
 export async function GET(req: Request) {
@@ -76,9 +76,13 @@ export async function POST(req: Request) {
     ownerId: userId,
     archived: !!archived,
   })
+  // Log project creation activity
   try {
-    await ActivityModel.create({ type: 'project_created', message: `Project \"${name}\" created`, user: { id: userId, name: 'You' }, projectId: created._id })
-  } catch {}
+    const { ActivityLogger } = await import('@/lib/activity-logger')
+    await ActivityLogger.logProject('created', name, created._id.toString(), userId)
+  } catch (error) {
+    console.error('Failed to log project creation activity:', error)
+  }
   const mapped: Project = {
     id: created._id.toString(),
     name: created.name,

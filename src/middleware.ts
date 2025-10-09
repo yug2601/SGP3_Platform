@@ -1,4 +1,4 @@
-import { clerkMiddleware , createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 // Public routes only; protect API by default so auth() has session context
 const isPublicRoute = createRouteMatcher([

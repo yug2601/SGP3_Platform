@@ -53,22 +53,36 @@ export default function ChatPage() {
   useEffect(() => {
     if (!selectedProjectId) return
     api<ChatMessageItem[]>(`/api/chat/${selectedProjectId}`).then(setMessages).catch(() => setMessages([]))
-    let socket: any
-    ;(async () => {
+    
+    // Real-time updates via polling with activity detection
+    let isActive = true
+    
+    const poll = async () => {
+      if (!isActive) return
       try {
-        await fetch('/api/socketio')
-        const { io } = await import('socket.io-client')
-        socket = io({ path: '/api/socketio' })
-        const room = `project:${selectedProjectId}`
-        socket.emit('join', room)
-        socket.on('chat:message', (msg: ChatMessageItem) => {
-          if (msg.projectId === selectedProjectId) {
-            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
-          }
+        const m = await api<ChatMessageItem[]>(`/api/chat/${selectedProjectId}`)
+        setMessages(prev => {
+          const hasNewMessages = m.length > prev.length || 
+            m.some(msg => !prev.find(p => p.id === msg.id))
+          return hasNewMessages ? m : prev
         })
       } catch {}
-    })()
-    return () => { try { socket?.disconnect?.() } catch {} }
+    }
+    
+    // Poll immediately when page becomes active
+    const handleVisibilityChange = () => {
+      isActive = !document.hidden
+      if (isActive) poll()
+    }
+    
+    // Start polling
+    const interval = setInterval(poll, 15000) // Poll every 15 seconds
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [selectedProjectId])
 
   useEffect(() => {
@@ -98,13 +112,7 @@ export default function ChatPage() {
         body: JSON.stringify({ content: optimistic.content, sender: optimistic.sender }),
       })
       setMessages(prev => prev.map(m => m.id === optimistic.id ? created : m))
-      try {
-        const { io } = await import('socket.io-client')
-        const s = io({ path: '/api/socketio' })
-        // Broadcast the already-saved message to peers
-        s.emit('chat:broadcast', created)
-        setTimeout(() => s.disconnect(), 300)
-      } catch {}
+      // Message sent successfully - polling will pick up updates
     } catch {}
   }
 

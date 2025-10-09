@@ -45,9 +45,13 @@ const ActivitySchema = new Schema({
   message: { type: String, required: true },
   time: { type: Date, default: Date.now },
   user: UserRefSchema,
+  userId: { type: String, required: true }, // Always track which user performed the action
   projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
+  taskId: { type: Schema.Types.ObjectId, ref: 'Task' },
+  metadata: { type: Schema.Types.Mixed }, // Store additional contextual data
 })
 ActivitySchema.index({ time: -1 })
+ActivitySchema.index({ userId: 1, time: -1 }) // User-specific activity lookup
 ActivitySchema.index({ projectId: 1, time: -1 })
 
 const ChatMessageSchema = new Schema({

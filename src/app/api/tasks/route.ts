@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Task } from '@/lib/types'
 import { dbConnect } from '@/lib/db'
-import { ProjectModel, TaskModel, ActivityModel } from '@/lib/models'
+import { ProjectModel, TaskModel } from '@/lib/models'
 
 function mapTask(t: any): Task {
   return {
@@ -99,15 +99,13 @@ export async function POST(req: Request) {
     creatorId: userId,
   })
   await ProjectModel.updateOne({ _id: projectId }, { $inc: { tasksCount: 1 } })
-  // record activity
+  // Log task creation activity
   try {
-    await ActivityModel.create({
-      type: 'task_created',
-      message: `Task "${title}" created`,
-      user: assignee?.id ? { id: assignee.id, name: assignee.name, avatar: assignee.avatar } : { id: userId, name: 'You' },
-      projectId,
-    })
-  } catch {}
+    const { ActivityLogger } = await import('@/lib/activity-logger')
+    await ActivityLogger.logTask('created', title, createdDoc._id.toString(), projectId, userId)
+  } catch (error) {
+    console.error('Failed to log task creation activity:', error)
+  }
   // recompute project progress lazily
   try {
     const total = await TaskModel.countDocuments({ projectId })
