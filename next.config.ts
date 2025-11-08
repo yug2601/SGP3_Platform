@@ -1,12 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Allow loading dev assets from specific origins (e.g., LAN IP)
-  allowedDevOrigins: [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://10.224.128.55:3000",
-  ],
   // Enable standalone output for Docker deployments (good for Render)
   output: 'standalone',
   typescript: {
@@ -31,6 +25,39 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  // Webpack optimizations for production
+  webpack: (config, { isServer }) => {
+    // For server builds, ignore client-side packages
+    if (isServer) {
+      config.externals = config.externals || []
+      config.externals.push(
+        'socket.io-client',
+        'recharts',
+        /^socket\.io-client/,
+        /^recharts/
+      )
+    }
+
+    // Add fallbacks for both client and server
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+      stream: false,
+      url: false,
+      zlib: false,
+      http: false,
+      https: false,
+      assert: false,
+      os: false,
+      path: false,
+      child_process: false,
+    };
+    
+    return config;
   },
 };
 

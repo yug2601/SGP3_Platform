@@ -27,10 +27,15 @@ interface QuickStats {
 }
 
 function getGreeting(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return "Good morning"
-  if (hour < 18) return "Good afternoon"
-  return "Good evening"
+  // Get current time in IST (Indian Standard Time)
+  const now = new Date()
+  const istTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}))
+  const hour = istTime.getHours()
+  
+  if (hour >= 4 && hour < 12) return "Good Morning"
+  if (hour >= 12 && hour < 16) return "Good Afternoon"  
+  if (hour >= 16 && hour < 20) return "Good Evening"
+  return "Good Night"
 }
 
 function getMotivationalMessage(stats: QuickStats): string {
@@ -79,14 +84,14 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-xl ${className}`}
+        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 dark:from-blue-700 dark:via-purple-700 dark:to-pink-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
       >
         <div className="animate-pulse">
-          <div className="h-8 w-64 bg-white/20 rounded mb-4"></div>
-          <div className="h-4 w-48 bg-white/20 rounded mb-6"></div>
+          <div className="h-8 w-64 bg-white/20 dark:bg-white/30 rounded mb-4"></div>
+          <div className="h-4 w-48 bg-white/20 dark:bg-white/30 rounded mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white/10 rounded-xl p-4 h-24"></div>
+              <div key={i} className="bg-white/10 dark:bg-white/15 rounded-xl p-4 h-24"></div>
             ))}
           </div>
         </div>
@@ -104,24 +109,24 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-xl ${className}`}
+      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 dark:from-blue-700 dark:via-purple-700 dark:to-pink-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
     >
       {/* Background decoration */}
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+      <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 dark:bg-white/5 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 dark:bg-white/5 rounded-full blur-2xl"></div>
       
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              <Sparkles className="h-7 w-7" />
+            <div className="h-14 w-14 rounded-xl bg-white/20 dark:bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/30 dark:border-white/40">
+              <Sparkles className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold mb-1">
+              <h1 className="text-3xl font-bold mb-1 text-white">
                 {getGreeting()}, {displayName}! 👋
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-blue-100 dark:text-blue-200 text-lg font-medium">
                 {getMotivationalMessage(stats)}
               </p>
             </div>
@@ -130,13 +135,13 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
           {/* Achievement badges */}
           <div className="hidden md:flex flex-col gap-2">
             {stats.completionRate >= 90 && (
-              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+              <Badge className="bg-white/20 dark:bg-white/30 text-white border-white/30 dark:border-white/40 hover:bg-white/30 dark:hover:bg-white/40">
                 <Award className="h-3 w-3 mr-1" />
                 High Achiever
               </Badge>
             )}
             {stats.dueToday === 0 && stats.completedTasks > 0 && (
-              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+              <Badge className="bg-white/20 dark:bg-white/30 text-white border-white/30 dark:border-white/40 hover:bg-white/30 dark:hover:bg-white/40">
                 <Target className="h-3 w-3 mr-1" />
                 On Track
               </Badge>
@@ -150,14 +155,14 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all duration-300 group"
+            className="bg-white/10 dark:bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 dark:border-white/30 hover:bg-white/15 dark:hover:bg-white/20 transition-all duration-300 group"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Target className="h-5 w-5 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Today's Focus</span>
+              <Target className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold text-white">Today's Focus</span>
             </div>
-            <p className="text-2xl font-bold">{stats.dueToday}</p>
-            <p className="text-xs text-blue-100">
+            <p className="text-2xl font-bold text-white">{stats.dueToday}</p>
+            <p className="text-xs text-blue-100 dark:text-blue-200">
               {stats.dueToday === 0 ? "All caught up!" : `task${stats.dueToday > 1 ? 's' : ''} due today`}
             </p>
           </motion.div>
@@ -166,14 +171,14 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all duration-300 group"
+            className="bg-white/10 dark:bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 dark:border-white/30 hover:bg-white/15 dark:hover:bg-white/20 transition-all duration-300 group"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Zap className="h-5 w-5 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Active Projects</span>
+              <Zap className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold text-white">Active Projects</span>
             </div>
-            <p className="text-2xl font-bold">{stats.activeProjects}</p>
-            <p className="text-xs text-blue-100">
+            <p className="text-2xl font-bold text-white">{stats.activeProjects}</p>
+            <p className="text-xs text-blue-100 dark:text-blue-200">
               {stats.activeProjects === 0 ? "Start a new project" : "in progress"}
             </p>
           </motion.div>
@@ -182,21 +187,21 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all duration-300 group"
+            className="bg-white/10 dark:bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20 dark:border-white/30 hover:bg-white/15 dark:hover:bg-white/20 transition-all duration-300 group"
           >
             <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="h-5 w-5 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Success Rate</span>
+              <TrendingUp className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold text-white">Success Rate</span>
             </div>
-            <p className="text-2xl font-bold">{stats.completionRate}%</p>
-            <p className="text-xs text-blue-100">
+            <p className="text-2xl font-bold text-white">{stats.completionRate}%</p>
+            <p className="text-xs text-blue-100 dark:text-blue-200">
               task completion rate
             </p>
           </motion.div>
         </div>
 
         {/* Quick action hints */}
-        <div className="mt-6 flex items-center gap-4 text-sm text-blue-100">
+        <div className="mt-6 flex items-center gap-4 text-sm text-blue-100 dark:text-blue-200">
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
             <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>

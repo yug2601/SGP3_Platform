@@ -1,19 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  Tooltip, 
-  Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
-} from 'recharts'
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Dynamic import to prevent SSR issues with recharts
+let PieChart: any, Pie: any, Cell: any, ResponsiveContainer: any, Tooltip: any, Legend: any, BarChart: any, Bar: any, XAxis: any, YAxis: any, CartesianGrid: any
 
 interface ChartData {
   name?: string
@@ -58,6 +50,41 @@ export function PieChartCard({
   type = 'pie',
   className 
 }: PieChartCardProps) {
+  const [isClient, setIsClient] = useState(false)
+  const [chartsLoaded, setChartsLoaded] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    // Dynamically import recharts only on client side
+    import('recharts').then((module) => {
+      PieChart = module.PieChart
+      Pie = module.Pie
+      Cell = module.Cell
+      ResponsiveContainer = module.ResponsiveContainer
+      Tooltip = module.Tooltip
+      Legend = module.Legend
+      BarChart = module.BarChart
+      Bar = module.Bar
+      XAxis = module.XAxis
+      YAxis = module.YAxis
+      CartesianGrid = module.CartesianGrid
+      setChartsLoaded(true)
+    })
+  }, [])
+
+  if (!isClient || !chartsLoaded) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="w-full h-[300px]" />
+        </CardContent>
+      </Card>
+    )
+  }
   // Prepare data with colors
   const chartData = data.map((item, index) => ({
     ...item,

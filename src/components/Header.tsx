@@ -30,7 +30,7 @@ export function Header() {
               <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full border-2 border-background animate-pulse"></div>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-black dark:text-white">
                 TogetherFlow
               </h1>
               <p className="text-xs text-muted-foreground -mt-1">Collaborative Productivity</p>

@@ -137,7 +137,7 @@ export default function ProjectsPage() {
               <Target className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-black dark:text-white">
                 Projects
               </h1>
               <p className="text-lg text-muted-foreground">

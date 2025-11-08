@@ -1,18 +1,12 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Area,
-  AreaChart
-} from 'recharts'
+import { Skeleton } from "@/components/ui/skeleton"
 import { ActivityDataPoint } from "@/lib/types"
+
+// Dynamic import to prevent SSR issues with recharts
+let LineChart: any, Line: any, XAxis: any, YAxis: any, CartesianGrid: any, Tooltip: any, ResponsiveContainer: any, Area: any, AreaChart: any
 
 interface LineChartCardProps {
   title: string
@@ -35,6 +29,40 @@ export function LineChartCard({
   height = 300,
   className 
 }: LineChartCardProps) {
+  const [isClient, setIsClient] = useState(false)
+  const [chartsLoaded, setChartsLoaded] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    // Dynamically import recharts only on client side
+    import('recharts').then((module) => {
+      LineChart = module.LineChart
+      Line = module.Line
+      XAxis = module.XAxis
+      YAxis = module.YAxis
+      CartesianGrid = module.CartesianGrid
+      Tooltip = module.Tooltip
+      ResponsiveContainer = module.ResponsiveContainer
+      Area = module.Area
+      AreaChart = module.AreaChart
+      setChartsLoaded(true)
+    })
+  }, [])
+
+  if (!isClient || !chartsLoaded) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="w-full h-[300px]" />
+        </CardContent>
+      </Card>
+    )
+  }
+
   const ChartComponent = gradient ? AreaChart : LineChart
 
   return (

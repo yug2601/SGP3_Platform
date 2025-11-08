@@ -72,7 +72,7 @@ function StatsCard({ title, value, subtitle, icon, gradient, delay, badge }: Sta
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
     >
-      <Card className={`group hover:shadow-lg transition-all duration-300 border-0 ${gradient}`}>
+      <Card className={`group hover:shadow-lg dark:hover:shadow-2xl transition-all duration-300 border-0 ${gradient}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold">{title}</CardTitle>
@@ -82,7 +82,7 @@ function StatsCard({ title, value, subtitle, icon, gradient, delay, badge }: Sta
               </Badge>
             )}
           </div>
-          <div className="h-10 w-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="h-10 w-10 rounded-lg bg-white/20 dark:bg-white/30 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
             {icon}
           </div>
         </CardHeader>
@@ -145,8 +145,8 @@ export function PersonalizedStats() {
       title: "Active Tasks",
       value: stats.tasks.todo + stats.tasks.inProgress,
       subtitle: `${stats.tasks.done} completed`,
-      icon: <CheckSquare className="h-5 w-5 text-green-600" />,
-      gradient: "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 text-green-700 dark:text-green-300",
+      icon: <CheckSquare className="h-5 w-5 text-green-600 dark:text-green-400" />,
+      gradient: "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-800/50",
       delay: 0.1,
       badge: stats.tasks.overdue > 0 ? { text: `${stats.tasks.overdue} overdue`, variant: "destructive" as const } : undefined
     },
@@ -154,16 +154,16 @@ export function PersonalizedStats() {
       title: "My Projects", 
       value: stats.projects.active,
       subtitle: `${stats.projects.completed} completed`,
-      icon: <FolderOpen className="h-5 w-5 text-blue-600" />,
-      gradient: "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 text-blue-700 dark:text-blue-300",
+      icon: <FolderOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
+      gradient: "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50",
       delay: 0.2
     },
     {
       title: "Due Today",
       value: stats.tasks.dueToday,
       subtitle: `${stats.tasks.dueThisWeek} this week`,
-      icon: <Calendar className="h-5 w-5 text-purple-600" />,
-      gradient: "bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/50 text-purple-700 dark:text-purple-300",
+      icon: <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
+      gradient: "bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50",
       delay: 0.3,
       badge: stats.tasks.dueToday > 0 ? { text: "urgent", variant: "default" as const } : undefined
     },
@@ -171,16 +171,16 @@ export function PersonalizedStats() {
       title: "Notifications",
       value: stats.notifications.unread,
       subtitle: "unread messages",
-      icon: <Bell className="h-5 w-5 text-orange-600" />,
-      gradient: "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 text-orange-700 dark:text-orange-300",
+      icon: <Bell className="h-5 w-5 text-orange-600 dark:text-orange-400" />,
+      gradient: "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-800/50",
       delay: 0.4
     },
     {
       title: "Completion Rate",
       value: `${stats.productivity.completionRate}%`,
       subtitle: "task completion",
-      icon: <Award className="h-5 w-5 text-emerald-600" />,
-      gradient: "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 text-emerald-700 dark:text-emerald-300",
+      icon: <Award className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />,
+      gradient: "bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50",
       delay: 0.5,
       badge: stats.productivity.completionRate >= 80 ? { text: "excellent", variant: "default" as const } : 
              stats.productivity.completionRate >= 60 ? { text: "good", variant: "secondary" as const } : undefined
@@ -189,8 +189,8 @@ export function PersonalizedStats() {
       title: "High Priority",
       value: stats.tasks.highPriority,
       subtitle: "urgent tasks",
-      icon: <AlertTriangle className="h-5 w-5 text-red-600" />,
-      gradient: "bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/50 dark:to-pink-950/50 text-red-700 dark:text-red-300",
+      icon: <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />,
+      gradient: "bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30 text-red-700 dark:text-red-300 border border-red-200/50 dark:border-red-800/50",
       delay: 0.6,
       badge: stats.tasks.highPriority > 0 ? { text: "needs attention", variant: "destructive" as const } : undefined
     },
@@ -198,16 +198,16 @@ export function PersonalizedStats() {
       title: "Weekly Activity",
       value: stats.activity.thisWeek,
       subtitle: "actions this week",
-      icon: <BarChart3 className="h-5 w-5 text-indigo-600" />,
-      gradient: "bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-indigo-950/50 dark:to-cyan-950/50 text-indigo-700 dark:text-indigo-300",
+      icon: <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />,
+      gradient: "bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-indigo-950/30 dark:to-cyan-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/50",
       delay: 0.7
     },
     {
       title: "Productivity",
       value: `${stats.productivity.averageProjectProgress}%`,
       subtitle: "avg. project progress",
-      icon: <Zap className="h-5 w-5 text-yellow-600" />,
-      gradient: "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/50 dark:to-orange-950/50 text-yellow-700 dark:text-yellow-300",
+      icon: <Zap className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />,
+      gradient: "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200/50 dark:border-yellow-800/50",
       delay: 0.8
     }
   ]

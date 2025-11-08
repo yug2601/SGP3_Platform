@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -9,10 +10,19 @@ import { AlertCircle } from 'lucide-react'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
 import { AnalyticsHeader } from '@/components/analytics/AnalyticsHeader'
 import { MetricCard } from '@/components/analytics/MetricCard'
-import { LineChartCard } from '@/components/analytics/LineChartCard'
-import { PieChartCard } from '@/components/analytics/PieChartCard'
 import { TopContributorsCard } from '@/components/analytics/TopContributorsCard'
 import { ActivityFeedCard } from '@/components/analytics/ActivityFeedCard'
+
+// Dynamic imports for chart components to avoid SSR issues
+const LineChartCard = dynamic(() => import('@/components/analytics/LineChartCard').then(m => ({ default: m.LineChartCard })), { 
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full" />
+})
+
+const PieChartCard = dynamic(() => import('@/components/analytics/PieChartCard').then(m => ({ default: m.PieChartCard })), { 
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full" />
+})
 
 function LoadingSkeleton() {
   return (

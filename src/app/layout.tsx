@@ -1,18 +1,14 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import { LayoutContent } from '@/components/LayoutContent'
 import ClerkErrorBoundary from '@/components/ClerkErrorBoundary'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
   subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -48,7 +44,7 @@ export default function RootLayout({
         }}
       >
         <html lang="en" suppressHydrationWarning>
-          <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <body className={`${inter.variable} font-sans antialiased`}>
             <LayoutContent>{children}</LayoutContent>
           </body>
         </html>

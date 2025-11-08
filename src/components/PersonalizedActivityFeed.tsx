@@ -131,7 +131,7 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
 
   if (loading) {
     return (
-      <Card className={`border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/50 dark:to-gray-950/50 ${className}`}>
+      <Card className={`border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 ${className}`}>
         <CardHeader className="border-b border-border/50">
           <div className="flex items-center justify-between">
             <Skeleton className="h-6 w-32" />
@@ -156,10 +156,10 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
   }
 
   return (
-    <Card className={`border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/50 dark:to-gray-950/50 ${className}`}>
+    <Card className={`border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 ${className}`}>
       <CardHeader className="border-b border-border/50">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-3 text-xl">
+          <CardTitle className="flex items-center gap-3 text-xl text-foreground">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
@@ -203,10 +203,10 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.05 * index }}
-              className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 group border border-transparent hover:border-border/50"
+              className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-200 group border border-transparent hover:border-border/50"
             >
               <div className="flex-shrink-0 mt-1">
-                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-primary/20">
+                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-primary/20 dark:border-primary/30">
                   <ActivityIcon type={item.type} />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
               <div className="h-16 w-16 rounded-full bg-muted/30 mx-auto mb-4 flex items-center justify-center">
                 <TrendingUp className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No recent activity</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No recent activity</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                 {activeTab === "personal" 
                   ? "Start creating tasks or projects to see your activity here."
