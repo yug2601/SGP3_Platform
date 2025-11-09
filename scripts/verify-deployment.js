@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 /**
  * Pre-deployment verification script
@@ -6,7 +7,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 console.log('🔍 TogetherFlow Vercel Deployment Verification\n');
 
@@ -45,12 +45,10 @@ try {
       hasErrors = true;
     }
   });
-} catch (error) {
-  console.log('  ❌ Could not read package.json');
-  hasErrors = true;
-}
-
-// Check if .env.local exists (for local development)
+  } catch {
+    console.log('  ❌ Could not read package.json');
+    hasErrors = true;
+  }// Check if .env.local exists (for local development)
 console.log('\n🔧 Checking environment configuration...');
 if (fs.existsSync('.env.local')) {
   console.log('  ✅ .env.local exists (for local development)');
@@ -70,19 +68,19 @@ console.log('\n⚡ Checking Vercel configuration...');
 try {
   const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
   
-  if (vercelConfig.builds && vercelConfig.builds.length > 0) {
-    console.log('  ✅ Build configuration found');
+  if (vercelConfig.version === 2) {
+    console.log('  ✅ Vercel version 2 configuration found');
   } else {
-    console.log('  ❌ Build configuration missing');
+    console.log('  ❌ Vercel version not specified or incorrect');
     hasErrors = true;
   }
   
-  if (vercelConfig.env) {
-    console.log('  ✅ Environment variables template found');
+  if (vercelConfig.functions || vercelConfig.rewrites) {
+    console.log('  ✅ Modern Vercel configuration detected');
   } else {
-    console.log('  ⚠️  Environment variables template not found in vercel.json');
+    console.log('  ⚠️  Basic configuration (this is OK for simple deployments)');
   }
-} catch (error) {
+} catch {
   console.log('  ❌ Could not read vercel.json');
   hasErrors = true;
 }
@@ -98,7 +96,7 @@ try {
   } else {
     console.log('  ✅ Next.js configuration looks good for Vercel');
   }
-} catch (error) {
+} catch {
   console.log('  ❌ Could not read next.config.ts');
   hasErrors = true;
 }

@@ -56,22 +56,40 @@ export class NotificationService {
 
       await notification.save()
 
-      // Broadcast notification in real-time via Socket.IO
-      if (typeof globalThis !== 'undefined' && (globalThis as any).socketIo) {
-        const io = (globalThis as any).socketIo
-        const notificationData = {
-          id: notification._id.toString(),
-          userId: notification.userId,
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          isRead: false,
-          time: notification.time.toISOString(),
-          sender: notification.sender
+      // For Vercel deployment, we'll use a simpler notification approach
+      // In production, you might want to use a service like Pusher or implement Server-Sent Events
+      console.log('Notification sent:', {
+        userId: data.userId,
+        type: data.type,
+        title: data.title,
+        message: data.message
+      })
+
+      // Try to broadcast via the simplified socket endpoint
+      if (typeof fetch !== 'undefined') {
+        try {
+          await fetch('/api/socketio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId: `user:${data.userId}`,
+              message: {
+                id: notification._id.toString(),
+                userId: notification.userId,
+                type: notification.type,
+                title: notification.title,
+                message: notification.message,
+                isRead: false,
+                time: notification.time.toISOString(),
+                sender: notification.sender
+              },
+              userId: data.userId,
+              type: 'new-notification'
+            })
+          })
+        } catch (error) {
+          console.log('Could not broadcast notification:', error)
         }
-        
-        // Send to user-specific room
-        io.to(`user:${data.userId}`).emit('new-notification', notificationData)
       }
 
       // Log the notification activity

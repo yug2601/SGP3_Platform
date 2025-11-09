@@ -1,28 +1,17 @@
 {
   "version": 2,
-  "regions": ["cle1"],
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/socketio",
-      "dest": "/api/socketio"
-    }
-  ],
   "functions": {
-    "src/app/api/**": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "src/pages/api/**/*.ts": {
       "maxDuration": 30
     }
   },
-  "env": {
-    "MONGODB_URI": "@mongodb-uri",
-    "MONGODB_DB": "@mongodb-db",
-    "CLERK_SECRET_KEY": "@clerk-secret-key",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "@next-public-clerk-publishable-key",
-    "AUTH_SECRET": "@auth-secret"
-  }
+  "rewrites": [
+    {
+      "source": "/api/socketio",
+      "destination": "/api/socketio"
+    }
+  ]
 }

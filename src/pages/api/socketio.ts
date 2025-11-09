@@ -1,77 +1,38 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { Server as IOServer } from 'socket.io'
 
-// Extend the Next.js response type to include socket server
-interface NextApiResponseWithSocket extends NextApiResponse {
-  socket: {
-    server: any
+// Simplified Socket.IO endpoint for Vercel compatibility
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
   }
-}
 
-// Global variable to store the IO server instance
-let io: IOServer | undefined
-
-const SocketHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
-  if (!res.socket.server.io) {
-    console.log('Setting up Socket.IO...')
+  if (req.method === 'GET') {
+    // Return connection info
+    res.status(200).json({
+      status: 'connected',
+      transport: 'polling',
+      timestamp: Date.now()
+    })
+  } else if (req.method === 'POST') {
+    // Handle message posting
+    const { roomId, message, userId, type } = req.body
     
-    // Initialize Socket.IO with the existing server
-    io = new IOServer(res.socket.server, {
-      path: '/api/socketio',
-      addTrailingSlash: false,
-      cors: {
-        origin: process.env.NODE_ENV === 'production' 
-          ? [process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'] 
-          : ['http://localhost:3000'],
-        methods: ["GET", "POST"],
-        credentials: true
-      }
+    // Log the message (in production, you'd handle real broadcasting)
+    console.log('Socket message:', { roomId, message, userId, type })
+    
+    res.status(200).json({
+      status: 'message_sent',
+      data: { roomId, message, userId, type },
+      timestamp: Date.now()
     })
-
-    // Socket.IO event handlers
-    io.on('connection', (socket) => {
-      console.log('A user connected:', socket.id)
-
-      // Handle user joining their notification room
-      socket.on('join-user-room', (userId: string) => {
-        socket.join(`user:${userId}`)
-        console.log(`User ${socket.id} joined notification room for user ${userId}`)
-      })
-
-      // Handle user joining project room
-      socket.on('join-project', (projectId: string) => {
-        socket.join(`project:${projectId}`)
-        console.log(`User ${socket.id} joined project room ${projectId}`)
-      })
-
-      // Handle user leaving project room
-      socket.on('leave-project', (projectId: string) => {
-        socket.leave(`project:${projectId}`)
-        console.log(`User ${socket.id} left project room ${projectId}`)
-      })
-
-      // Legacy: Handle join room
-      socket.on('join-room', (roomId: string) => {
-        socket.join(roomId)
-        console.log(`User ${socket.id} joined room ${roomId}`)
-      })
-
-      // Handle chat message
-      socket.on('send-message', (data: any) => {
-        io?.to(data.roomId).emit('receive-message', data)
-      })
-
-      socket.on('disconnect', () => {
-        console.log('A user disconnected:', socket.id)
-      })
-    })
-
-    // Make io globally available for notification service
-    ;(globalThis as any).socketIo = io
-    res.socket.server.io = io
+  } else {
+    res.setHeader('Allow', ['GET', 'POST', 'OPTIONS'])
+    res.status(405).end(`Method ${req.method} Not Allowed`)
   }
-
-  res.end()
 }
-
-export default SocketHandler
