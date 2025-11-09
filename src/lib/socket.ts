@@ -50,11 +50,15 @@ class SocketManager {
 
     try {
       // Connect to Socket.IO server
-      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', {
-        transports: ['websocket', 'polling'],
-        upgrade: true,
-        rememberUpgrade: true,
-      })
+      this.socket = io(process.env.NODE_ENV === 'production' 
+        ? process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+        : 'http://localhost:3000', 
+        {
+          path: '/api/socketio',
+          transports: ['websocket', 'polling'],
+          upgrade: true,
+          rememberUpgrade: true,
+        })
 
       this.socket.on('connect', () => {
         console.log('Connected to Socket.IO server:', this.socket?.id)

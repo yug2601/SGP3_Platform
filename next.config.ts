@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker deployments (good for Render)
-  output: 'standalone',
+  // Vercel deployment configuration
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -26,9 +25,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Webpack optimizations for production
+  // Webpack optimizations for Vercel
   webpack: (config, { isServer }) => {
-    // For server builds, ignore client-side packages
+    // Optimize for serverless functions
     if (isServer) {
       config.externals = config.externals || []
       config.externals.push(

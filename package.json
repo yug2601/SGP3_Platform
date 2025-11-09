@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
-    "dev:next": "next dev",
+    "dev": "next dev",
     "build": "next build",
-    "start": "node server.js",
+    "start": "next start",
     "lint": "next lint",
+    "export": "next export",
     "db:test": "node scripts/db-test.cjs",
-    "db:setup": "tsx scripts/mongo/setup.ts"
+    "db:setup": "tsx scripts/mongo/setup.ts",
+    "vercel-build": "next build",
+    "verify-deployment": "node scripts/verify-deployment.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.28.1",
@@ -55,6 +57,7 @@
     "dotenv": "^17.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
+    "tsx": "^4.19.1",
     "typescript": "^5"
   }
 }

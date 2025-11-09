@@ -57,8 +57,8 @@ export class NotificationService {
       await notification.save()
 
       // Broadcast notification in real-time via Socket.IO
-      if (typeof global !== 'undefined' && (global as any).socketIo) {
-        const io = (global as any).socketIo
+      if (typeof globalThis !== 'undefined' && (globalThis as any).socketIo) {
+        const io = (globalThis as any).socketIo
         const notificationData = {
           id: notification._id.toString(),
           userId: notification.userId,
