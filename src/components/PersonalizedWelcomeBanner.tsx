@@ -84,7 +84,7 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 dark:from-blue-700 dark:via-purple-700 dark:to-pink-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
+        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 via-emerald-500 to-green-600 dark:from-teal-600 dark:via-emerald-600 dark:to-green-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
       >
         <div className="animate-pulse">
           <div className="h-8 w-64 bg-white/20 dark:bg-white/30 rounded mb-4"></div>
@@ -109,7 +109,7 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 dark:from-blue-700 dark:via-purple-700 dark:to-pink-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
+        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 via-emerald-500 to-green-600 dark:from-teal-600 dark:via-emerald-600 dark:to-green-700 p-8 text-white shadow-xl dark:shadow-2xl ${className}`}
     >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
@@ -126,7 +126,7 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
               <h1 className="text-3xl font-bold mb-1 text-white">
                 {getGreeting()}, {displayName}! 👋
               </h1>
-              <p className="text-blue-100 dark:text-blue-200 text-lg font-medium">
+              <p className="text-teal-100 dark:text-teal-200 text-lg font-medium">
                 {getMotivationalMessage(stats)}
               </p>
             </div>
@@ -162,7 +162,7 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
               <span className="text-sm font-semibold text-white">Today's Focus</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.dueToday}</p>
-            <p className="text-xs text-blue-100 dark:text-blue-200">
+            <p className="text-xs text-teal-100 dark:text-teal-200">
               {stats.dueToday === 0 ? "All caught up!" : `task${stats.dueToday > 1 ? 's' : ''} due today`}
             </p>
           </motion.div>
@@ -178,7 +178,7 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
               <span className="text-sm font-semibold text-white">Active Projects</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.activeProjects}</p>
-            <p className="text-xs text-blue-100 dark:text-blue-200">
+            <p className="text-xs text-teal-100 dark:text-teal-200">
               {stats.activeProjects === 0 ? "Start a new project" : "in progress"}
             </p>
           </motion.div>
@@ -194,14 +194,14 @@ export function PersonalizedWelcomeBanner({ className = "" }: WelcomeBannerProps
               <span className="text-sm font-semibold text-white">Success Rate</span>
             </div>
             <p className="text-2xl font-bold text-white">{stats.completionRate}%</p>
-            <p className="text-xs text-blue-100 dark:text-blue-200">
+            <p className="text-xs text-teal-100 dark:text-teal-200">
               task completion rate
             </p>
           </motion.div>
         </div>
 
         {/* Quick action hints */}
-        <div className="mt-6 flex items-center gap-4 text-sm text-blue-100 dark:text-blue-200">
+        <div className="mt-6 flex items-center gap-4 text-sm text-teal-100 dark:text-teal-200">
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
             <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>

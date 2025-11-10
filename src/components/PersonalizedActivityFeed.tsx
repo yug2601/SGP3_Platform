@@ -6,17 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   CheckSquare, 
   FolderOpen, 
   TrendingUp, 
   Clock, 
-  Users, 
   MessageSquare,
   GitCommit,
   User,
-  Globe,
   RefreshCw
 } from "lucide-react"
 import { motion } from "@/components/motion"
@@ -89,14 +86,12 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState("all")
-
-  const fetchActivities = async (personal = false, refresh = false) => {
+  const fetchActivities = async (refresh = false) => {
     try {
       if (refresh) setRefreshing(true)
       const params = new URLSearchParams({
         limit: "20",
-        personal: personal.toString()
+        personal: "true"
       })
       const data = await api<ActivityItem[]>(`/api/activity?${params}`)
       setActivities(data)
@@ -110,23 +105,18 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
   }
 
   useEffect(() => {
-    fetchActivities(activeTab === "personal")
+    fetchActivities()
     
     // Auto-refresh every 15 seconds for real-time updates
     const interval = setInterval(() => {
-      fetchActivities(activeTab === "personal")
+      fetchActivities()
     }, 15000)
     
     return () => clearInterval(interval)
-  }, [activeTab])
+  }, [])
 
   const handleRefresh = () => {
-    fetchActivities(activeTab === "personal", true)
-  }
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    setLoading(true)
+    fetchActivities(true)
   }
 
   if (loading) {
@@ -176,23 +166,6 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
             Refresh
           </Button>
         </div>
-        
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              All Activity
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              My Activity
-            </TabsTrigger>
-            <TabsTrigger value="team" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Team
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </CardHeader>
       
       <CardContent className="p-6">
@@ -257,10 +230,7 @@ export function PersonalizedActivityFeed({ className = "" }: ActivityFeedProps) 
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">No recent activity</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                {activeTab === "personal" 
-                  ? "Start creating tasks or projects to see your activity here."
-                  : "Start collaborating with your team to see activity here."
-                }
+                Start creating tasks or projects to see your activity here.
               </p>
             </div>
           )}
