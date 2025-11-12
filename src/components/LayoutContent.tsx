@@ -24,15 +24,18 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        {/* Fixed Header */}
         <Header />
-        <div className="flex">
+        
+        {/* Main Layout with Sidebar */}
+        <div className="flex pt-16 pb-16">
           <Sidebar />
           <motion.main
             animate={{
               marginLeft: sidebarCollapsed ? 80 : 280,
             }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex-1 min-h-[calc(100vh-4rem)] relative"
+            className="flex-1 min-h-[calc(100vh-8rem)] relative"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -48,6 +51,8 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
             </AnimatePresence>
           </motion.main>
         </div>
+        
+        {/* Fixed Footer */}
         <Footer />
         
         {/* Real-time notification toasts - only for signed-in users */}

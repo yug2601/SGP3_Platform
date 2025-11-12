@@ -3,11 +3,17 @@ export type ID = string
 export type ProjectStatus = 'active' | 'completed' | 'on-hold'
 export type TaskStatus = 'todo' | 'in-progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high'
+export type ProjectRole = 'leader' | 'co-leader' | 'member'
 
 export interface UserRef {
   id: string
   name: string
   avatar?: string
+}
+
+export interface ProjectMember extends UserRef {
+  role: ProjectRole
+  joinedAt: string // ISO date
 }
 
 export interface Project {
@@ -19,8 +25,9 @@ export interface Project {
   dueDate?: string // ISO string
   createdAt: string // ISO
   updatedAt: string // ISO
-  members: UserRef[]
+  members: ProjectMember[]
   tasksCount: number
+  filesCount: number
   ownerId: string // Clerk user id
   archived?: boolean
   inviteCode?: string
@@ -214,4 +221,17 @@ export interface UserProfile {
   stats: UserStats
   createdAt: string
   updatedAt: string
+}
+
+export interface ProjectFile {
+  id: string
+  projectId: string
+  name: string
+  originalName: string
+  size: number // in bytes
+  mimeType: string
+  uploadedBy: UserRef
+  uploadedAt: string // ISO date
+  url: string
+  fileKey: string // For cloud storage identification
 }

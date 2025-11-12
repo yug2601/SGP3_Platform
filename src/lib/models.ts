@@ -2,14 +2,23 @@ import { Schema, model, models } from 'mongoose'
 
 const UserRefSchema = new Schema({ id: String, name: String, avatar: String }, { _id: false })
 
+const ProjectMemberSchema = new Schema({ 
+  id: String, 
+  name: String, 
+  avatar: String,
+  role: { type: String, enum: ['leader', 'co-leader', 'member'], default: 'member' },
+  joinedAt: { type: Date, default: Date.now }
+}, { _id: false })
+
 const ProjectSchema = new Schema({
   name: { type: String, required: true },
   description: { type: String, default: '' },
   status: { type: String, enum: ['active', 'completed', 'on-hold'], default: 'active' },
   progress: { type: Number, default: 0 },
   dueDate: { type: Date },
-  members: { type: [UserRefSchema], default: [] },
+  members: { type: [ProjectMemberSchema], default: [] },
   tasksCount: { type: Number, default: 0 },
+  filesCount: { type: Number, default: 0 },
   ownerId: { type: String, required: true },
   archived: { type: Boolean, default: false },
   inviteCode: { type: String },
@@ -94,9 +103,26 @@ const UserSchema = new Schema({
   }
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } })
 
+const ProjectFileSchema = new Schema({
+  projectId: { type: String, required: true },
+  name: { type: String, required: true },
+  originalName: { type: String, required: true },
+  size: { type: Number, required: true },
+  mimeType: { type: String, required: true },
+  uploadedBy: {
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    avatar: String
+  },
+  uploadedAt: { type: String, required: true },
+  url: { type: String, required: true },
+  fileKey: { type: String, required: true }
+})
+
 export const UserModel = models.User || model('User', UserSchema)
 export const ProjectModel = models.Project || model('Project', ProjectSchema)
 export const TaskModel = models.Task || model('Task', TaskSchema)
 export const NotificationModel = models.Notification || model('Notification', NotificationSchema)
 export const ActivityModel = models.Activity || model('Activity', ActivitySchema)
 export const ChatMessageModel = models.ChatMessage || model('ChatMessage', ChatMessageSchema)
+export const ProjectFileModel = models.ProjectFile || model('ProjectFile', ProjectFileSchema)

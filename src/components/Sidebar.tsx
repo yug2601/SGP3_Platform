@@ -43,7 +43,7 @@ export function Sidebar() {
         width: sidebarCollapsed ? 80 : 280,
       }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] glass border-r border-border/50"
+      className="fixed left-0 top-16 bottom-16 z-40 glass border-r border-border/50 overflow-y-auto"
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border/50">

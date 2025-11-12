@@ -1,9 +1,9 @@
 import Link from "next/link"
-import { Sparkles, Heart } from "lucide-react"
+import { Sparkles } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="glass border-t border-border/50">
+    <footer className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-border/50">
       <div className="container flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -38,11 +38,6 @@ export function Footer() {
           >
             Privacy
           </Link>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <span className="text-xs">Made with</span>
-            <Heart className="h-3 w-3 text-red-500 animate-pulse" />
-            <span className="text-xs">by the team</span>
-          </div>
         </div>
       </div>
     </footer>

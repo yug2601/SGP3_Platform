@@ -21,7 +21,19 @@ import type { Project } from "@/lib/types"
 import { useToast } from "@/components/ui/toast"
 import { useAuth, useClerk, useUser } from "@clerk/nextjs"
 
-const ProjectListItem = memo(function ProjectListItem({ project, index }: { project: Project, index: number }) {
+const ProjectListItem = memo(function ProjectListItem({ 
+  project, 
+  index, 
+  onProjectUpdated, 
+  onProjectArchived, 
+  showArchived = false 
+}: { 
+  project: Project, 
+  index: number,
+  onProjectUpdated: (project: Project) => void,
+  onProjectArchived: (projectId: string) => void,
+  showArchived?: boolean
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,11 +41,15 @@ const ProjectListItem = memo(function ProjectListItem({ project, index }: { proj
       transition={{ duration: 0.3, delay: index * 0.1 }}
     >
       <ProjectCard
-        project={{
-          ...project,
-          dueDate: project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '',
-        } as any}
-        onClick={() => { window.location.href = `/projects/${project.id}` }}
+        project={project}
+        onClick={() => { 
+          if (!showArchived) {
+            window.location.href = `/projects/${project.id}` 
+          }
+        }}
+        onProjectUpdated={onProjectUpdated}
+        onProjectArchived={onProjectArchived}
+        showArchived={showArchived}
       />
     </motion.div>
   )
@@ -54,6 +70,9 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [newProject, setNewProject] = useState({ name: "", description: "" })
   const [joinCode, setJoinCode] = useState("")
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([])
+  const [showArchived, setShowArchived] = useState(false)
+  const [loadingArchived, setLoadingArchived] = useState(false)
   const { show, Toast } = useToast()
 
   const load = useCallback(async () => {
@@ -74,6 +93,59 @@ export default function ProjectsPage() {
     }
   }, [isSignedIn, getToken])
 
+  const loadArchived = useCallback(async () => {
+    if (!isSignedIn) return
+    try {
+      setLoadingArchived(true)
+      const token = await getToken()
+      const data = await api<Project[]>("/api/projects/archived", {
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      setArchivedProjects(data)
+    } catch {
+      show("Failed to load archived projects")
+    } finally {
+      setLoadingArchived(false)
+    }
+  }, [isSignedIn, getToken, show])
+
+  const handleProjectUpdated = useCallback((updatedProject: Project) => {
+    // Update project in active list if it exists there
+    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p))
+    
+    // If project was restored from archive (archived: false), add it back to active list
+    if (!updatedProject.archived) {
+      setArchivedProjects(prev => prev.filter(p => p.id !== updatedProject.id))
+      // Add to active projects if not already there
+      setProjects(prev => {
+        const exists = prev.find(p => p.id === updatedProject.id)
+        if (!exists) {
+          return [updatedProject, ...prev]
+        }
+        return prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+      })
+    } else {
+      // If project was updated and archived, remove from active and add to archived
+      setProjects(prev => prev.filter(p => p.id !== updatedProject.id))
+      setArchivedProjects(prev => {
+        const exists = prev.find(p => p.id === updatedProject.id)
+        if (!exists) {
+          return [updatedProject, ...prev]
+        }
+        return prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+      })
+    }
+  }, [])
+
+  const handleProjectArchived = useCallback((projectId: string) => {
+    setProjects(prev => prev.filter(p => p.id !== projectId))
+    // Reload archived projects to show the newly archived one
+    if (showArchived) {
+      loadArchived()
+    }
+  }, [showArchived, loadArchived])
+
   useEffect(() => {
     if (!isSignedIn) {
       setProjects([])
@@ -82,6 +154,12 @@ export default function ProjectsPage() {
     }
     load()
   }, [isSignedIn, load])
+
+  useEffect(() => {
+    if (showArchived && isSignedIn) {
+      loadArchived()
+    }
+  }, [showArchived, isSignedIn, loadArchived])
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(searchQuery), 200)
@@ -96,6 +174,15 @@ export default function ProjectsPage() {
       return matchesSearch && matchesFilter && !project.archived
     })
   }, [projects, debounced, filterStatus])
+
+  const filteredArchivedProjects = useMemo(() => {
+    const q = debounced.toLowerCase()
+    return archivedProjects.filter(project => {
+      const matchesSearch = project.name.toLowerCase().includes(q) || project.description.toLowerCase().includes(q)
+      const matchesFilter = filterStatus === "all" || project.status === filterStatus
+      return matchesSearch && matchesFilter
+    })
+  }, [archivedProjects, debounced, filterStatus])
 
   async function createProject() {
     if (!newProject.name.trim()) return
@@ -137,33 +224,52 @@ export default function ProjectsPage() {
               <Target className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-black dark:text-white">
-                Projects
-              </h1>
+              <div className="flex items-baseline gap-3">
+                <h1 className="text-4xl font-bold text-black dark:text-white">
+                  {showArchived ? "Archived Projects" : "Projects"}
+                </h1>
+                <span className="text-lg font-medium text-muted-foreground">
+                  {showArchived ? filteredArchivedProjects.length : filteredProjects.length}
+                </span>
+              </div>
               <p className="text-lg text-muted-foreground">
-                Manage and track your team projects
+                {showArchived ? "View and restore your archived projects" : "Manage and track your team projects"}
               </p>
             </div>
           </div>
         </div>
-        <Button 
-          onClick={() => {
-            if (!isSignedIn) {
-              openSignIn({
-                // Return to Projects after sign-in
-                afterSignInUrl: '/projects',
-                // Some Clerk versions use redirectUrl
-                redirectUrl: '/projects',
-              })
-              return
-            }
-            setIsCreateModalOpen(true)
-          }}
-          className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button 
+            onClick={() => {
+              if (!isSignedIn) {
+                openSignIn({
+                  // Return to Projects after sign-in
+                  afterSignInUrl: '/projects',
+                  // Some Clerk versions use redirectUrl
+                  redirectUrl: '/projects',
+                })
+                return
+              }
+              setIsCreateModalOpen(true)
+            }}
+            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            onClick={() => setShowArchived(!showArchived)}
+            className="shadow-md hover:shadow-lg transition-all duration-200"
+          >
+            {showArchived ? "View Active Projects" : "View Archived"}
+            {!showArchived && archivedProjects.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-muted rounded-full text-xs font-medium">
+                {archivedProjects.length}
+              </span>
+            )}
+          </Button>
+        </div>
       </motion.div>
 
       {/* Enhanced Filters and Search */}
@@ -242,7 +348,7 @@ export default function ProjectsPage() {
         </motion.div>
       )}
       
-      {loading ? (
+      {(loading || (showArchived && loadingArchived)) ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -255,12 +361,18 @@ export default function ProjectsPage() {
       ) : (
         <motion.div layout>
           <ProgressiveList
-            items={filteredProjects}
+            items={showArchived ? filteredArchivedProjects : filteredProjects}
             containerClassName={viewMode === "grid" ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}
             initial={18}
             step={18}
             renderItem={(project, index) => (
-              <ProjectListItem project={project as any} index={index} />
+              <ProjectListItem 
+                project={project as any} 
+                index={index} 
+                onProjectUpdated={handleProjectUpdated}
+                onProjectArchived={handleProjectArchived}
+                showArchived={showArchived}
+              />
             )}
           />
         </motion.div>
@@ -282,7 +394,7 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {!loading && filteredProjects.length === 0 && (
+      {!loading && !loadingArchived && (showArchived ? filteredArchivedProjects.length === 0 : filteredProjects.length === 0) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -291,21 +403,49 @@ export default function ProjectsPage() {
           <div className="h-20 w-20 rounded-full bg-gradient-to-br from-muted/50 to-muted mx-auto mb-6 flex items-center justify-center">
             <Sparkles className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No projects found</h3>
-          <p className="text-muted-foreground mb-6">No projects match your current search criteria.</p>
-          <Button 
-            onClick={() => {
-              if (!isSignedIn) {
-                openSignIn({ afterSignInUrl: '/projects', redirectUrl: '/projects' })
-                return
-              }
-              setIsCreateModalOpen(true)
-            }}
-            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create your first project
-          </Button>
+          <h3 className="text-xl font-semibold text-foreground mb-2">
+            {showArchived 
+              ? (searchQuery || filterStatus !== "all" 
+                  ? "No archived projects match your criteria" 
+                  : "No archived projects") 
+              : (searchQuery || filterStatus !== "all" 
+                  ? "No projects found" 
+                  : "No projects yet")}
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            {showArchived 
+              ? (searchQuery || filterStatus !== "all"
+                  ? "Try adjusting your search or filter criteria."
+                  : "You don't have any archived projects yet.") 
+              : (searchQuery || filterStatus !== "all"
+                  ? "No projects match your current search criteria."
+                  : "Create your first project to get started.")}
+          </p>
+          {!showArchived && (searchQuery || filterStatus !== "all" ? (
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setSearchQuery("")
+                setFilterStatus("all")
+              }}
+            >
+              Clear filters
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => {
+                if (!isSignedIn) {
+                  openSignIn({ afterSignInUrl: '/projects', redirectUrl: '/projects' })
+                  return
+                }
+                setIsCreateModalOpen(true)
+              }}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create your first project
+            </Button>
+          ))}
         </motion.div>
       )}
 
@@ -354,7 +494,7 @@ export default function ProjectsPage() {
       </Modal>
 
       {/* Join by Code (quick action at bottom right) */}
-      <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-background/90 backdrop-blur rounded-xl border p-2 shadow">
+      <div className="fixed bottom-24 right-6 flex items-center gap-2 bg-background/90 backdrop-blur rounded-xl border p-2 shadow">
         <Input placeholder="Join code" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} className="w-40"/>
         <Button onClick={async () => {
           if (!joinCode.trim()) return
