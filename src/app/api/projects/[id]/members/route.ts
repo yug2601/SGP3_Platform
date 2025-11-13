@@ -15,8 +15,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   await dbConnect()
   const { id } = await ctx.params
-  const project: any = await ProjectModel.findOne({ _id: id, ownerId: userId }).lean()
+  const project: any = await ProjectModel.findOne({ _id: id }).lean()
   if (!project) return new NextResponse('Not found', { status: 404 })
+
+  // Check permissions - leaders and co-leaders can add members
+  const { getProjectPermissions } = await import('@/lib/permissions')
+  const permissions = getProjectPermissions(project, userId)
+  if (!permissions.canAddRemoveMembers()) {
+    return new NextResponse('Insufficient permissions - only leaders and co-leaders can add members', { status: 403 })
+  }
 
   let toAdd: any = member
   if (!toAdd && email) {
@@ -47,7 +54,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const exists = (project.members || []).some((m: any) => m.id === toAdd.id)
   if (exists) return NextResponse.json({ added: true })
 
-  await ProjectModel.updateOne({ _id: id }, { $push: { members: toAdd } })
+  // Add default role for new members
+  const memberWithRole = {
+    ...toAdd,
+    role: 'member',
+    joinedAt: new Date()
+  }
+
+  await ProjectModel.updateOne({ _id: id }, { $push: { members: memberWithRole } })
   try {
     await ActivityModel.create({ type: 'member_added', message: `${toAdd.name} joined the project`, user: { id: userId, name: 'You' }, projectId: id as any })
   } catch {}

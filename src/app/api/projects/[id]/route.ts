@@ -71,8 +71,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params
   if (!isValidObjectId(id)) return new NextResponse('Not found', { status: 404 })
+  
+  // Get project to check permissions
+  const project: any = await ProjectModel.findOne({ _id: id }).lean()
+  if (!project) return new NextResponse('Not found', { status: 404 })
+  
+  // Check permissions - leaders and co-leaders can edit projects
+  const { getProjectPermissions } = await import('@/lib/permissions')
+  const permissions = getProjectPermissions(project, userId)
+  if (!permissions.canEditProject()) {
+    return new NextResponse('Insufficient permissions - only leaders and co-leaders can edit projects', { status: 403 })
+  }
+  
   const updated: any = await ProjectModel.findOneAndUpdate(
-    { _id: id, $or: [{ ownerId: userId }, { 'members.id': userId }] },
+    { _id: id },
     { $set: updates },
     { new: true }
   ).lean()
@@ -114,9 +126,21 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   await dbConnect()
   const { id } = await params
   if (!isValidObjectId(id)) return new NextResponse('Not found', { status: 404 })
+  
+  // Get project to check permissions
+  const project: any = await ProjectModel.findOne({ _id: id }).lean()
+  if (!project) return new NextResponse('Not found', { status: 404 })
+  
+  // Check permissions - only leaders can delete/archive projects
+  const { getProjectPermissions } = await import('@/lib/permissions')
+  const permissions = getProjectPermissions(project, userId)
+  if (!permissions.canDeleteProject()) {
+    return new NextResponse('Insufficient permissions - only project leaders can archive projects', { status: 403 })
+  }
+  
   // Soft-archive instead of delete to avoid data loss
   const updated: any = await ProjectModel.findOneAndUpdate(
-    { _id: id, ownerId: userId },
+    { _id: id },
     { $set: { archived: true } },
     { new: true }
   ).lean()

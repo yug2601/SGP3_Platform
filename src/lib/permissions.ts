@@ -51,8 +51,19 @@ export class ProjectPermissions {
     return this.isLeader()
   }
 
-  // Check if user can manage members (only leader)
+  // Check if user can manage members (leader can do all, co-leader can add/remove but not assign roles)
   canManageMembers(): boolean {
+    return this.isLeader()
+  }
+
+  // Check if user can add/remove members (leader and co-leader)
+  canAddRemoveMembers(): boolean {
+    const role = this.getCurrentUserRole()
+    return role === 'leader' || role === 'co-leader'
+  }
+
+  // Check if user can assign roles (only leader)
+  canAssignRoles(): boolean {
     return this.isLeader()
   }
 

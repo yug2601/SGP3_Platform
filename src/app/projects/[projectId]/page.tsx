@@ -562,47 +562,152 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                 <CardTitle>Team Members</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2 mb-4">
-                  <Button variant="outline" onClick={async () => {
-                    const email = prompt('Invite by email')
-                    if (!email) return
-                    await api(`/api/projects/${project.id}/members`, { method: 'POST', body: JSON.stringify({ email }) })
-                    const refreshed = await api<Project>(`/api/projects/${project.id}`)
-                    setProject(refreshed)
-                  }}>Add by Email</Button>
-                  <Button variant="outline" onClick={async () => {
-                    const res = await api<{ inviteCode: string }>(`/api/projects/${project.id}/invite`, { method: 'POST' })
-                    navigator.clipboard?.writeText(res.inviteCode).catch(() => {})
-                    alert(`Invite code: ${res.inviteCode} (copied)`)
-                  }}>Generate Invite Code</Button>
-                  <Button variant="outline" onClick={async () => {
-                    const code = prompt('Enter invite code to join this project from another account')
-                    if (!code) return
-                    // no-op here; joining occurs on the other account via /api/projects/join
-                    alert('Share code with your teammate. They can use /projects -> Join with code UI (coming)')
-                  }}>Join by Code</Button>
-                </div>
+                {permissions?.canAddRemoveMembers() && (
+                  <div className="flex gap-2 mb-4">
+                    <Button variant="outline" onClick={async () => {
+                      const email = prompt('Invite by email')
+                      if (!email) return
+                      try {
+                        await api(`/api/projects/${project.id}/members`, { method: 'POST', body: JSON.stringify({ email }) })
+                        const refreshed = await api<Project>(`/api/projects/${project.id}`)
+                        setProject(refreshed)
+                      } catch {
+                        alert('Failed to add member. Please check permissions and try again.')
+                      }
+                    }}>Add by Email</Button>
+                    <Button variant="outline" onClick={async () => {
+                      try {
+                        const res = await api<{ inviteCode: string }>(`/api/projects/${project.id}/invite`, { method: 'POST' })
+                        navigator.clipboard?.writeText(res.inviteCode).catch(() => {})
+                        alert(`Invite code: ${res.inviteCode} (copied)`)
+                      } catch {
+                        alert('Failed to generate invite code.')
+                      }
+                    }}>Generate Invite Code</Button>
+                    <Button variant="outline" onClick={async () => {
+                      const code = prompt('Enter invite code to join this project from another account')
+                      if (!code) return
+                      alert('Share code with your teammate. They can use /projects -> Join with code UI (coming)')
+                    }}>Join by Code</Button>
+                  </div>
+                )}
                 <div className="space-y-3">
-                  {[...project.members].sort((a, b) => (a.name === currentUserName ? -1 : b.name === currentUserName ? 1 : 0)).map((member, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex items-center gap-3"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={member.avatar} />
-                        <AvatarFallback>
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{member.name}{member.name === currentUserName ? ' (you)' : ''}</p>
-                        <p className="text-sm text-muted-foreground">Member</p>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {[...project.members].sort((a, b) => {
+                    // Sort: owner first, current user, then others
+                    if (a.id === project.ownerId) return -1
+                    if (b.id === project.ownerId) return 1
+                    if (a.name === currentUserName) return -1
+                    if (b.name === currentUserName) return 1
+                    return 0
+                  }).map((member, index) => {
+                    const isOwner = member.id === project.ownerId
+                    const isCurrentUser = member.name === currentUserName
+                    const canManageThisMember = permissions?.canAssignRoles() && !isOwner && !isCurrentUser
+                    const canRemoveThisMember = permissions?.canAddRemoveMembers() && !isOwner && (
+                      permissions?.isLeader() || 
+                      (permissions?.isCoLeader() && member.role === 'member') || 
+                      isCurrentUser
+                    )
+
+                    const roleDisplay = isOwner ? 'Leader (Owner)' : 
+                      member.role === 'leader' ? 'Leader' :
+                      member.role === 'co-leader' ? 'Co-Leader' : 'Member'
+                    
+                    return (
+                      <motion.div
+                        key={member.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback>
+                              {member.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">
+                              {member.name}
+                              {isCurrentUser ? ' (you)' : ''}
+                              {isOwner ? ' 👑' : ''}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{roleDisplay}</p>
+                          </div>
+                        </div>
+                        
+                        {(canManageThisMember || canRemoveThisMember) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canManageThisMember && (
+                                <>
+                                  {member.role !== 'co-leader' && (
+                                    <DropdownMenuItem onClick={async () => {
+                                      try {
+                                        await api(`/api/projects/${project.id}/members/manage`, {
+                                          method: 'PATCH',
+                                          body: JSON.stringify({ memberId: member.id, role: 'co-leader' })
+                                        })
+                                        const refreshed = await api<Project>(`/api/projects/${project.id}`)
+                                        setProject(refreshed)
+                                      } catch {
+                                        alert('Failed to update member role.')
+                                      }
+                                    }}>
+                                      Make Co-Leader
+                                    </DropdownMenuItem>
+                                  )}
+                                  {member.role !== 'member' && (
+                                    <DropdownMenuItem onClick={async () => {
+                                      try {
+                                        await api(`/api/projects/${project.id}/members/manage`, {
+                                          method: 'PATCH',
+                                          body: JSON.stringify({ memberId: member.id, role: 'member' })
+                                        })
+                                        const refreshed = await api<Project>(`/api/projects/${project.id}`)
+                                        setProject(refreshed)
+                                      } catch {
+                                        alert('Failed to update member role.')
+                                      }
+                                    }}>
+                                      Make Member
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              {canRemoveThisMember && (
+                                <DropdownMenuItem 
+                                  className="text-red-600 dark:text-red-400"
+                                  onClick={async () => {
+                                    if (!confirm(`Are you sure you want to remove ${member.name} from this project?`)) return
+                                    try {
+                                      await api(`/api/projects/${project.id}/members/manage`, {
+                                        method: 'DELETE',
+                                        body: JSON.stringify({ memberId: member.id })
+                                      })
+                                      const refreshed = await api<Project>(`/api/projects/${project.id}`)
+                                      setProject(refreshed)
+                                    } catch {
+                                      alert('Failed to remove member.')
+                                    }
+                                  }}
+                                >
+                                  {isCurrentUser ? 'Leave Project' : 'Remove Member'}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </motion.div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
