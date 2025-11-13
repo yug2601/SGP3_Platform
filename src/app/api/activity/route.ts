@@ -75,7 +75,8 @@ export async function POST(req: Request) {
     }
 
     const { ActivityLogger } = await import('@/lib/activity-logger')
-    const { type, message, projectId, taskId, metadata } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { type, message, projectId, taskId, metadata } = body
 
     await ActivityLogger.log({
       type,

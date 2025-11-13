@@ -24,7 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const resolvedParams = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse('Unauthorized', { status: 401 })
-  const patch = await req.json()
+  const patch = await req.json().catch(() => ({}))
   await dbConnect()
   // ensure task belongs to user's project
   const task: any = await TaskModel.findById(resolvedParams.id).lean()

@@ -266,7 +266,7 @@ export default function TasksPage() {
                     }}
                   />
                   <p className="text-xs text-muted-foreground px-2">
-                    Project: {projectNameById[(task as any).projectId] || '—'}
+                    Project: {(task as any).projectName || projectNameById[(task as any).projectId] || '—'}
                   </p>
                 </div>
               </motion.div>

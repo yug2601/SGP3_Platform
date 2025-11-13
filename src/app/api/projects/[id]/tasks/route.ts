@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 import { isValidObjectId } from 'mongoose'
 import { dbConnect } from '@/lib/db'
 import { ProjectModel, TaskModel } from '@/lib/models'
-import { getProjectPermissions } from '@/lib/permissions'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   let { userId } = await auth()
@@ -21,12 +20,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const project: any = await ProjectModel.findById(projectId).lean()
   if (!project) return new NextResponse('Project not found', { status: 404 })
 
-  const permissions = getProjectPermissions(project, userId)
-  if (!permissions.canManageTasks()) {
+  // Direct permission check - owner, leader, or co-leader can manage tasks
+  const isOwner = project.ownerId === userId
+  const member = project.members?.find((m: any) => m.id === userId)
+  const canManage = isOwner || member?.role === 'leader' || member?.role === 'co-leader'
+  
+  if (!canManage) {
     return new NextResponse('Insufficient permissions', { status: 403 })
   }
 
-  const body = await req.json()
+  const body = await req.json().catch(() => ({}))
   const { title, description, priority = 'medium', assigneeId, dueDate } = body
 
   if (!title?.trim()) {
@@ -57,6 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const responseTask = {
     id: task._id.toString(),
     projectId: task.projectId.toString(),
+    projectName: project.name,
     title: task.title,
     description: task.description,
     status: task.status,
@@ -87,8 +91,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const project: any = await ProjectModel.findById(projectId).lean()
   if (!project) return new NextResponse('Project not found', { status: 404 })
 
-  const permissions = getProjectPermissions(project, userId)
-  if (!permissions.canViewProject()) {
+  // Direct permission check - if user is owner or member, they can view
+  const isOwner = project.ownerId === userId
+  const isMember = project.members?.some((m: any) => m.id === userId) || false
+  
+  if (!isOwner && !isMember) {
     return new NextResponse('Insufficient permissions', { status: 403 })
   }
 
@@ -97,6 +104,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const responseTasks = tasks.map(task => ({
     id: task._id.toString(),
     projectId: task.projectId.toString(),
+    projectName: project.name,
     title: task.title,
     description: task.description,
     status: task.status,

@@ -527,7 +527,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
             <File className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{project.filesCount || 0}</div>
+            <div className="text-2xl font-bold">{files.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {formatFileSize(files.reduce((acc, file) => acc + file.size, 0))} total
             </p>

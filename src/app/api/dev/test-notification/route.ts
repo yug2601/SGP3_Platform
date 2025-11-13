@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (!userId) return new NextResponse('Unauthorized', { status: 401 })
 
   try {
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const { type = 'task_assigned', title = 'Test Notification', message = 'This is a test notification' } = body
 
     await NotificationService.send({

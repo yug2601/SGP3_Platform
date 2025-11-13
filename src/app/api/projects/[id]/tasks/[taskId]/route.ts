@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 import { isValidObjectId } from 'mongoose'
 import { dbConnect } from '@/lib/db'
 import { ProjectModel, TaskModel } from '@/lib/models'
-import { getProjectPermissions } from '@/lib/permissions'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string, taskId: string }> }) {
   let { userId } = await auth()
@@ -23,15 +22,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const project: any = await ProjectModel.findById(projectId).lean()
   if (!project) return new NextResponse('Project not found', { status: 404 })
 
-  const permissions = getProjectPermissions(project, userId)
-  if (!permissions.canManageTasks()) {
+  // Direct permission check - owner, leader, or co-leader can manage tasks
+  const isOwner = project.ownerId === userId
+  const member = project.members?.find((m: any) => m.id === userId)
+  const canManage = isOwner || member?.role === 'leader' || member?.role === 'co-leader'
+  
+  if (!canManage) {
     return new NextResponse('Insufficient permissions', { status: 403 })
   }
 
   const task: any = await TaskModel.findOne({ _id: taskId, projectId }).lean()
   if (!task) return new NextResponse('Task not found', { status: 404 })
 
-  const body = await req.json()
+  const body = await req.json().catch(() => ({}))
   const updates: any = {}
 
   // Only update provided fields
@@ -55,6 +58,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const responseTask = {
     id: updatedTask._id.toString(),
     projectId: updatedTask.projectId.toString(),
+    projectName: project.name,
     title: updatedTask.title,
     description: updatedTask.description,
     status: updatedTask.status,
@@ -87,8 +91,12 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const project: any = await ProjectModel.findById(projectId).lean()
   if (!project) return new NextResponse('Project not found', { status: 404 })
 
-  const permissions = getProjectPermissions(project, userId)
-  if (!permissions.canManageTasks()) {
+  // Direct permission check - owner, leader, or co-leader can manage tasks
+  const isOwner = project.ownerId === userId
+  const member = project.members?.find((m: any) => m.id === userId)
+  const canManage = isOwner || member?.role === 'leader' || member?.role === 'co-leader'
+  
+  if (!canManage) {
     return new NextResponse('Insufficient permissions', { status: 403 })
   }
 

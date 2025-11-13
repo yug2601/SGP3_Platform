@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { dbConnect } from '@/lib/db'
 import { ProjectModel, ProjectFileModel } from '@/lib/models'
-import { getProjectPermissions } from '@/lib/permissions'
 import type { Project } from '@/lib/types'
 
 // Fixed Next.js 15 params handling
@@ -26,8 +25,11 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    const permissions = getProjectPermissions(project, userId)
-    if (!permissions.canViewProject()) {
+    // Direct permission check - if user is owner or member, they can view
+    const isOwner = project.ownerId === userId
+    const isMember = project.members?.some((m: any) => m.id === userId) || false
+    
+    if (!isOwner && !isMember) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

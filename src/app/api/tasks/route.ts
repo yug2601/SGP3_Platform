@@ -42,26 +42,32 @@ export async function GET(req: Request) {
   // Build visibility: projects where user is owner or member
   const visibleProjects = await ProjectModel.find({
     $or: [{ ownerId: userId }, { 'members.id': userId }],
-  }).select('_id').lean()
+  }).select('_id name').lean()
   const visibleIds = visibleProjects.map((p: any) => p._id)
+  
+  // Create project name lookup
+  const projectNames = visibleProjects.reduce((acc: Record<string, string>, p: any) => {
+    acc[p._id.toString()] = p.name
+    return acc
+  }, {})
 
   let query: any
   if (projectIdParam) {
     // tasks for a specific project (ensure visibility)
     query = { $and: [ { projectId: { $in: visibleIds } }, { projectId: projectIdParam } ] }
   } else {
-    // personal tasks: created by me or assigned to me across visible projects
+    // personal tasks: only assigned to me across visible projects (exclude unassigned)
     query = {
       projectId: { $in: visibleIds },
-      $or: [
-        { creatorId: userId },
-        { 'assignee.id': userId },
-      ],
+      'assignee.id': userId,
     }
   }
 
   const items = await TaskModel.find(query).sort({ updatedAt: -1 }).lean()
-  return NextResponse.json(items.map(mapTask))
+  return NextResponse.json(items.map((task: any) => ({
+    ...mapTask(task),
+    projectName: projectNames[task.projectId.toString()] || 'Unknown Project'
+  })))
 }
 
 import { taskCreateSchema } from '@/lib/validation'
@@ -86,8 +92,15 @@ export async function POST(req: Request) {
   const { projectId, title, description, status, priority, dueDate, assignee } = parsed.data
 
   await dbConnect()
-  const project = await ProjectModel.findOne({ _id: projectId, ownerId: userId }).lean()
+  const project = await ProjectModel.findById(projectId).lean()
   if (!project) return new NextResponse('Project not found', { status: 404 })
+  
+  // Check permissions
+  const { getProjectPermissions } = await import('@/lib/permissions')
+  const permissions = getProjectPermissions(project as any, userId)
+  if (!permissions.canManageTasks()) {
+    return new NextResponse('Insufficient permissions', { status: 403 })
+  }
 
   const createdDoc = await TaskModel.create({
     projectId,

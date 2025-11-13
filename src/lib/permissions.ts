@@ -39,8 +39,9 @@ export class ProjectPermissions {
     return this.getCurrentUserRole() !== null
   }
 
-  // Check if user can manage tasks (leader or co-leader)
+  // Check if user can manage tasks (owner or leader or co-leader)
   canManageTasks(): boolean {
+    if (this.project.ownerId === this.userId) return true
     const role = this.getCurrentUserRole()
     return role === 'leader' || role === 'co-leader'
   }
@@ -55,15 +56,16 @@ export class ProjectPermissions {
     return this.isLeader()
   }
 
-  // Check if user can edit project details (leader or co-leader)
+  // Check if user can edit project details (owner or leader or co-leader)
   canEditProject(): boolean {
+    if (this.isOwner()) return true
     const role = this.getCurrentUserRole()
     return role === 'leader' || role === 'co-leader'
   }
 
-  // Check if user can view project (any member)
+  // Check if user can view project (any member or owner)
   canViewProject(): boolean {
-    return this.isMember()
+    return this.project.ownerId === this.userId || this.isMember()
   }
 
   // Get current user's role

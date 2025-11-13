@@ -65,13 +65,32 @@ export async function POST(req: Request) {
   const { name, description, status, progress, dueDate, members, archived } = parsed.data
 
   await dbConnect()
+  
+  // Get current user info to add as leader
+  const { UserModel } = await import('@/lib/models')
+  const currentUser: any = await UserModel.findOne({ clerkId: userId }).lean()
+  const userName = currentUser?.name || 'Project Owner'
+  const userAvatar = currentUser?.imageUrl || ''
+  
+  // Always add the creator as the first member with leader role
+  const projectMembers = [
+    {
+      id: userId,
+      name: userName,
+      avatar: userAvatar,
+      role: 'leader',
+      joinedAt: new Date()
+    },
+    ...(members || [])
+  ]
+  
   const created = await ProjectModel.create({
     name,
     description,
     status,
     progress,
     dueDate: dueDate ? new Date(dueDate) : undefined,
-    members,
+    members: projectMembers,
     tasksCount: 0,
     ownerId: userId,
     archived: !!archived,
