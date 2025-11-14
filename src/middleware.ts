@@ -14,6 +14,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/activity(.*)',
   '/api/health',
   '/api/auth/(.*)',
+  '/api/webhooks/(.*)',
   '/not-found',
   '/error',
   '/auth-required',
@@ -27,8 +28,8 @@ const isPublicRoute = createRouteMatcher([
 function fallbackMiddleware(request: NextRequest) {
   console.log('Using fallback middleware - Clerk not configured')
   
-  // Allow public routes
-  if (isPublicRoute(request)) {
+  // Allow all public routes and API routes without authentication
+  if (isPublicRoute(request) || request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.next()
   }
   
