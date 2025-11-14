@@ -25,25 +25,27 @@ export default function RootLayout({
   
   // Check for required Clerk keys
   if (!publishableKey) {
-    console.error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY - authentication will not work')
+    console.error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY')
     
-    // In production, throw an error instead of showing fallback
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required for production deployment')
-    }
-    
-    // Development fallback
+    // In production, provide a basic layout that works
     return (
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
           <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
             <div className="container mx-auto px-4 py-8">
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded">
-                <p className="font-bold">⚠️ Configuration Required</p>
-                <p>Please add your Clerk environment variables to complete the setup.</p>
-                <p className="text-sm mt-2">Required: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</p>
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded">
+                <p className="font-bold">⚠️ Authentication Configuration Error</p>
+                <p>The application is not properly configured for authentication.</p>
+                <p className="text-sm mt-2">Administrator: Please check environment variables.</p>
               </div>
-              {children}
+              <div className="text-center py-12">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  TogetherFlow
+                </h1>
+                <p className="text-gray-600 dark:text-gray-300">
+                  The application is currently being configured. Please try again later.
+                </p>
+              </div>
             </div>
           </div>
         </body>

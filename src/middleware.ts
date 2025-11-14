@@ -1,6 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-// Public routes only; protect API by default so auth() has session context
+// Public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/',
   '/about',
@@ -9,26 +11,55 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/auth(.*)',
-  // Keep activity public if you want to view it without auth; otherwise remove this line
   '/api/activity(.*)',
-  // Add health check route for deployment verification
-  '/api/health'
+  '/api/health',
+  '/not-found',
+  '/error',
+  '/auth-required'
 ])
 
-export default clerkMiddleware(async (auth, req) => {
-  // Skip auth for public routes
-  if (isPublicRoute(req)) {
-    return
+// Fallback middleware when Clerk is not configured
+function fallbackMiddleware(request: NextRequest) {
+  console.log('Using fallback middleware - Clerk not configured')
+  
+  // Allow public routes
+  if (isPublicRoute(request)) {
+    return NextResponse.next()
   }
   
-  try {
-    await auth.protect()
-  } catch (error) {
-    console.error('Authentication error in middleware:', error)
-    // In production, this will properly handle auth failures
-    throw error
+  // Redirect protected routes to auth-required page
+  return NextResponse.redirect(new URL('/auth-required', request.url))
+}
+
+export default function middleware(request: NextRequest) {
+  // Check if Clerk environment variables are present
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  const secretKey = process.env.CLERK_SECRET_KEY
+  
+  // Use fallback middleware if Clerk is not configured
+  if (!publishableKey || !secretKey) {
+    return fallbackMiddleware(request)
   }
-})
+  
+  // Use Clerk middleware if properly configured
+  return clerkMiddleware(async (auth, req) => {
+    // Skip auth for public routes
+    if (isPublicRoute(req)) {
+      return NextResponse.next()
+    }
+    
+    try {
+      await auth.protect()
+      return NextResponse.next()
+    } catch (error) {
+      console.error('Authentication error:', error)
+      // Redirect to sign-in on auth failure
+      const signInUrl = new URL('/sign-in', req.url)
+      signInUrl.searchParams.set('redirect_url', req.url)
+      return NextResponse.redirect(signInUrl)
+    }
+  })(request)
+}
 
 export const config = {
   matcher: [
