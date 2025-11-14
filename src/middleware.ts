@@ -10,12 +10,23 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/auth(.*)',
   // Keep activity public if you want to view it without auth; otherwise remove this line
-  '/api/activity(.*)'
+  '/api/activity(.*)',
+  // Add health check route for deployment verification
+  '/api/health'
 ])
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
+  // Skip auth for public routes
+  if (isPublicRoute(req)) {
+    return
+  }
+  
+  try {
     await auth.protect()
+  } catch (error) {
+    console.error('Authentication error in middleware:', error)
+    // In production, this will properly handle auth failures
+    throw error
   }
 })
 

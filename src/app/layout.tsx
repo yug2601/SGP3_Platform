@@ -23,17 +23,25 @@ export default function RootLayout({
 }>) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   
-  // Allow builds to proceed without Clerk keys (they can be added in Vercel later)
+  // Check for required Clerk keys
   if (!publishableKey) {
-    console.warn('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY - using fallback layout')
+    console.error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY - authentication will not work')
+    
+    // In production, throw an error instead of showing fallback
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required for production deployment')
+    }
+    
+    // Development fallback
     return (
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
-          <div className="min-h-screen bg-background text-foreground">
+          <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
             <div className="container mx-auto px-4 py-8">
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-                <p className="font-bold">Configuration Required</p>
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded">
+                <p className="font-bold">⚠️ Configuration Required</p>
                 <p>Please add your Clerk environment variables to complete the setup.</p>
+                <p className="text-sm mt-2">Required: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</p>
               </div>
               {children}
             </div>
