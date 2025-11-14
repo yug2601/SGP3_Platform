@@ -54,26 +54,35 @@ export default function RootLayout({
   }
 
   return (
-    <ClerkErrorBoundary>
-      <ClerkProvider
-        publishableKey={publishableKey}
-        signInUrl="/sign-in"
-        signUpUrl="/sign-up"
-        afterSignInUrl="/"
-        afterSignUpUrl="/"
-        appearance={{
-          baseTheme: undefined,
-          elements: {
-            formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
+    <ClerkProvider
+      publishableKey={publishableKey}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up" 
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+      domain={process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL}
+      isSatellite={false}
+      appearance={{
+        baseTheme: undefined,
+        elements: {
+          formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
+        },
+      }}
+      localization={{
+        signIn: {
+          start: {
+            title: 'Sign in to TogetherFlow',
           },
-        }}
-      >
-        <html lang="en" suppressHydrationWarning>
-          <body className={`${inter.variable} font-sans antialiased`}>
+        },
+      }}
+    >
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.variable} font-sans antialiased`}>
+          <ClerkErrorBoundary>
             <LayoutContent>{children}</LayoutContent>
-          </body>
-        </html>
-      </ClerkProvider>
-    </ClerkErrorBoundary>
+          </ClerkErrorBoundary>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
