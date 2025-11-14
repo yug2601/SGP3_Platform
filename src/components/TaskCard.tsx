@@ -257,7 +257,7 @@ function TaskCardInner({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {projectMembers.filter(m => m.role !== 'member').map((member) => (
+                    {projectMembers.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name} ({member.role})
                       </SelectItem>

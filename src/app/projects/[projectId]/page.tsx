@@ -16,6 +16,7 @@ import {
 import nextDynamic from "next/dynamic"
 const TaskCard = nextDynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
 const ChatMessage = nextDynamic(() => import("@/components/ChatMessage").then(m => m.ChatMessage), { ssr: false })
+const ProjectCalendar = nextDynamic(() => import("@/components/ProjectCalendar").then(m => m.ProjectCalendar), { ssr: false })
 import { Modal } from "@/components/Modal"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
@@ -76,6 +77,16 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
   const permissions = project && user ? getProjectPermissions(project, user.id) : null
   const canManageTasks = permissions?.canManageTasks() ?? false
 
+  // Function to load/reload tasks
+  const loadTasks = React.useCallback(async () => {
+    try {
+      const t = await api<Task[]>(`/api/projects/${params.projectId}/tasks`)
+      setTasks(t)
+    } catch {
+      setTasks([])
+    }
+  }, [params.projectId])
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -83,10 +94,8 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
         const p = await api<Project>(`/api/projects/${params.projectId}`)
         if (!cancelled) setProject(p)
       } catch { if (!cancelled) setProject(null) }
-      try {
-        const t = await api<Task[]>(`/api/projects/${params.projectId}/tasks`)
-        if (!cancelled) setTasks(t)
-      } catch { if (!cancelled) setTasks([]) }
+      // Load tasks using the loadTasks function
+      if (!cancelled) await loadTasks()
       try {
         const f = await api<ProjectFile[]>(`/api/projects/${params.projectId}/files`)
         if (!cancelled) setFiles(f)
@@ -101,7 +110,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
       } catch {}
     })()
     return () => { cancelled = true }
-  }, [params.projectId])
+  }, [params.projectId, loadTasks])
 
   // Auto-scroll chat to bottom when messages change
   useEffect(() => {
@@ -537,9 +546,10 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
@@ -760,6 +770,17 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="space-y-6">
+          <ProjectCalendar
+            projectId={project.id}
+            projectName={project.name}
+            projectTasks={tasks}
+            projectMembers={project.members}
+            canManageTasks={canManageTasks}
+            onTaskCreated={loadTasks}
+          />
         </TabsContent>
 
         <TabsContent value="files" className="space-y-6">

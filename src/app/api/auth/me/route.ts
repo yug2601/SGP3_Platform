@@ -5,7 +5,7 @@ import { UserModel } from '@/lib/models'
 
 export async function GET() {
   const { userId } = await auth()
-  if (!userId) return NextResponse.json({ name: 'You' })
+  if (!userId) return NextResponse.json({ name: 'You', userId: null })
   
   try {
     const clerkUser = await currentUser()
@@ -58,7 +58,10 @@ export async function GET() {
       
       if (userProfile) {
         const displayName = userProfile.name || `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 'User'
-        return NextResponse.json({ name: displayName })
+        return NextResponse.json({ 
+          name: displayName,
+          userId: userId 
+        })
       }
     } catch (dbError) {
       console.error('Database error in /api/auth/me, falling back to Clerk data:', dbError)
@@ -69,9 +72,12 @@ export async function GET() {
     const lastName = clerkUser.lastName || ''
     const fallbackName = `${firstName} ${lastName}`.trim() || clerkUser.username || clerkUser.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
     
-    return NextResponse.json({ name: fallbackName })
+    return NextResponse.json({ 
+      name: fallbackName,
+      userId: userId 
+    })
   } catch (error) {
     console.error('Error in /api/auth/me:', error)
-    return NextResponse.json({ name: 'User' })
+    return NextResponse.json({ name: 'User', userId: userId })
   }
 }
