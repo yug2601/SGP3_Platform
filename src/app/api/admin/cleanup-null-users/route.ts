@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
+import { NextResponse } from 'next/server'
+import { dbConnect } from '@/lib/db'
 import { UserModel } from '@/lib/models'
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE() {
   try {
-    await connectToDatabase()
+    await dbConnect()
     
     // Find all users with null or undefined userId
     const nullUserEntries = await UserModel.find({
@@ -48,9 +48,9 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    await connectToDatabase()
+    await dbConnect()
     
     // Find all users with null or undefined userId (without deleting)
     const nullUserEntries = await UserModel.find({
