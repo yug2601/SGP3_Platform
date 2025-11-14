@@ -1,1 +1,11 @@
-import type { AppProps } from 'next/app'\nimport { ClerkProvider } from '@clerk/nextjs'\n\n// This file ensures compatibility between app and pages router for Clerk\nexport default function App({ Component, pageProps }: AppProps) {\n  return (\n    <ClerkProvider>\n      <Component {...pageProps} />\n    </ClerkProvider>\n  )\n}
+import type { AppProps } from 'next/app'
+import { ClerkProvider } from '@clerk/nextjs'
+
+// This file ensures compatibility between app and pages router for Clerk
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <ClerkProvider>
+      <Component {...pageProps} />
+    </ClerkProvider>
+  )
+}
