@@ -58,21 +58,12 @@ export default function RootLayout({
       publishableKey={publishableKey}
       signInUrl="/sign-in"
       signUpUrl="/sign-up" 
-      afterSignInUrl="/"
-      afterSignUpUrl="/"
-      domain={process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL}
-      isSatellite={false}
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
       appearance={{
         baseTheme: undefined,
         elements: {
           formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-        },
-      }}
-      localization={{
-        signIn: {
-          start: {
-            title: 'Sign in to TogetherFlow',
-          },
         },
       }}
     >

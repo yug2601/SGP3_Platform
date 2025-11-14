@@ -1,21 +1,8 @@
 "use client"
 
-import dynamic from 'next/dynamic'
 import { ThemeProvider } from 'next-themes'
-import { motion, AnimatePresence } from '@/components/motion'
-import { usePathname } from 'next/navigation'
-import { useUIStore } from '@/lib/zustand'
-import { SignedIn } from '@clerk/nextjs'
-import { NotificationToast } from '@/components/NotificationToast'
-
-const Header = dynamic(() => import('@/components/Header').then(m => m.Header))
-const Sidebar = dynamic(() => import('@/components/Sidebar').then(m => m.Sidebar))
-const Footer = dynamic(() => import('@/components/Footer').then(m => m.Footer))
 
 export function LayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const { sidebarCollapsed } = useUIStore()
-
   return (
     <ThemeProvider
       attribute="class"
@@ -24,41 +11,25 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        {/* Fixed Header */}
-        <Header />
+        {/* Simplified layout without complex components for now */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 className="text-xl font-bold">TogetherFlow</h1>
+            <div className="text-sm text-muted-foreground">Collaborative Platform</div>
+          </div>
+        </header>
         
-        {/* Main Layout with Sidebar */}
-        <div className="flex pt-16 pb-16">
-          <Sidebar />
-          <motion.main
-            animate={{
-              marginLeft: sidebarCollapsed ? 80 : 280,
-            }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex-1 min-h-[calc(100vh-8rem)] relative"
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="container mx-auto px-6 py-8 max-w-7xl"
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
-          </motion.main>
-        </div>
+        <main className="pt-16 pb-16 min-h-[calc(100vh-4rem)]">
+          <div className="container mx-auto px-6 py-8 max-w-7xl">
+            {children}
+          </div>
+        </main>
         
-        {/* Fixed Footer */}
-        <Footer />
-        
-        {/* Real-time notification toasts - only for signed-in users */}
-        <SignedIn>
-          <NotificationToast />
-        </SignedIn>
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-sm border-t">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">© 2025 TogetherFlow</p>
+          </div>
+        </footer>
       </div>
     </ThemeProvider>
   )
