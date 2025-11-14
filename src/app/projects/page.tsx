@@ -6,8 +6,7 @@ import { Plus, Search, Filter, Grid, List, Sparkles, Target } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import dynamic from "next/dynamic"
-const ProjectCard = dynamic(() => import("@/components/ProjectCard").then(m => m.ProjectCard), { ssr: false })
+import { ProjectCard } from "@/components/ProjectCard"
 import { ProgressiveList } from "@/components/ProgressiveList"
 import { Modal } from "@/components/Modal"
 import {

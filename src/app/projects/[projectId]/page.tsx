@@ -13,10 +13,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import nextDynamic from "next/dynamic"
-const TaskCard = nextDynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
-const ChatMessage = nextDynamic(() => import("@/components/ChatMessage").then(m => m.ChatMessage), { ssr: false })
-const ProjectCalendar = nextDynamic(() => import("@/components/ProjectCalendar").then(m => m.ProjectCalendar), { ssr: false })
+import { TaskCard } from "@/components/TaskCard"
+import { ChatMessage } from "@/components/ChatMessage"
+import { ProjectCalendar } from "@/components/ProjectCalendar"
 import { Modal } from "@/components/Modal"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"

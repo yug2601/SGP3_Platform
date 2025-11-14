@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { ProgressiveList } from "@/components/ProgressiveList"
-import dynamic from "next/dynamic"
-const TaskCard = dynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
+import { TaskCard } from "@/components/TaskCard"
 import { Modal } from "@/components/Modal"
 import {
   DropdownMenu,

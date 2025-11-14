@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useRef, useState } from "react"
-import dynamic from "next/dynamic"
 import { motion } from "@/components/motion"
 import { useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -20,7 +19,7 @@ import {
 import type { Task, TaskPriority } from "@/lib/types"
 import { Input } from "@/components/ui/input"
 
-const TaskDetailModal = dynamic(() => import("@/components/TaskDetailModal").then(m => m.TaskDetailModal), { ssr: false })
+import { TaskDetailModal } from "@/components/TaskDetailModal"
 
 type ViewMode = 'month' | 'week' | 'day'
 

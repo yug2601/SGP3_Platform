@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import dynamic from "next/dynamic"
 import { motion } from "@/components/motion"
 import { useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -25,10 +24,8 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-
-// Lazy load TaskCard to avoid SSR issues
-const TaskCard = dynamic(() => import("@/components/TaskCard").then(m => m.TaskCard), { ssr: false })
-const TaskDetailModal = dynamic(() => import("@/components/TaskDetailModal").then(m => m.TaskDetailModal), { ssr: false })
+import { TaskCard } from "@/components/TaskCard"
+import { TaskDetailModal } from "@/components/TaskDetailModal"
 
 type ViewMode = 'month' | 'week' | 'day'
 
