@@ -29,8 +29,15 @@ function seed(ownerId: string) {
     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
     createdAt: now,
     updatedAt: now,
-    members: [{ id: ownerId, name: 'You' }],
+    members: [{ 
+      id: ownerId, 
+      name: 'You', 
+      avatar: '',
+      role: 'leader' as const,
+      joinedAt: new Date().toISOString()
+    }],
     tasksCount: 0,
+    filesCount: 0,
     ownerId,
   }
   projects.set(p1.id, p1)
@@ -43,7 +50,7 @@ function seed(ownerId: string) {
     status: 'in-progress',
     priority: 'high',
     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString(),
-    assignee: { id: ownerId, name: 'You' },
+    assignee: { id: ownerId, name: 'You', avatar: '' },
     createdAt: now,
     updatedAt: now,
     creatorId: ownerId,

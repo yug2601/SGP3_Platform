@@ -1,422 +1,314 @@
 'use client'
 
-import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { AlertCircle } from 'lucide-react'
-
+import { useState, useEffect } from 'react'
+import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader"
+import { MetricCard } from "@/components/analytics/MetricCard"
+import { LineChartCard } from "@/components/analytics/LineChartCard"
+import { PieChartCard } from "@/components/analytics/PieChartCard"
+import { ContributorsCard } from "@/components/analytics/ContributorsCard"
+import { ActivitiesCard } from "@/components/analytics/ActivitiesCard"
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
-import { AnalyticsHeader } from '@/components/analytics/AnalyticsHeader'
-import { MetricCard } from '@/components/analytics/MetricCard'
-import { TopContributorsCard } from '@/components/analytics/TopContributorsCard'
-import { ActivityFeedCard } from '@/components/analytics/ActivityFeedCard'
-
-// Dynamic imports for chart components to avoid SSR issues
-const LineChartCard = dynamic(() => import('@/components/analytics/LineChartCard').then(m => ({ default: m.LineChartCard })), { 
-  ssr: false,
-  loading: () => <Skeleton className="h-[300px] w-full" />
-})
-
-const PieChartCard = dynamic(() => import('@/components/analytics/PieChartCard').then(m => ({ default: m.PieChartCard })), { 
-  ssr: false,
-  loading: () => <Skeleton className="h-[300px] w-full" />
-})
-
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-64 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
+import { usePersonalAnalytics } from '@/lib/hooks/usePersonalAnalytics'
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { BarChart3, Activity, Globe, User } from 'lucide-react'
 
 export default function AnalyticsPage() {
-  const [timeframe, setTimeframe] = useState('30d')
-  const { data, loading, error, refresh, setTimeframe: updateTimeframe, lastUpdated } = useAnalytics({
-    timeframe,
-    refreshInterval: 30000,
-    autoRefresh: true
-  })
+  const [activeSection, setActiveSection] = useState<'platform' | 'personal'>('platform')
+  const [timeframe, setTimeframe] = useState('7d')
+  
+  // Platform Analytics (keep original static data)
+  const { data: platformData, loading: platformLoading, refresh: refreshPlatform, lastUpdated: platformLastUpdated } = useAnalytics({ timeframe })
+  
+  // Personal Analytics with dashboard data
+  const { data: personalData, loading: personalLoading, refresh: refreshPersonal, lastUpdated: personalLastUpdated } = usePersonalAnalytics({ timeframe })
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(false)
+  
+  // Load dashboard data for personal analytics
+  useEffect(() => {
+    if (activeSection === 'personal') {
+      setDashboardLoading(true)
+      fetch('/api/analytics/dashboard')
+        .then(res => res.json())
+        .then(data => {
+          setDashboardData(data)
+          setDashboardLoading(false)
+        })
+        .catch(error => {
+          console.error('Failed to load dashboard data:', error)
+          setDashboardLoading(false)
+        })
+    }
+  }, [activeSection, timeframe])
 
-  const handleTimeframeChange = (newTimeframe: string) => {
-    setTimeframe(newTimeframe)
-    updateTimeframe(newTimeframe)
+  const isLoading = activeSection === 'platform' ? platformLoading : (personalLoading || dashboardLoading)
+  const lastUpdated = activeSection === 'platform' ? platformLastUpdated : personalLastUpdated
+
+  const handleRefresh = () => {
+    if (activeSection === 'platform') {
+      refreshPlatform()
+    } else {
+      refreshPersonal()
+    }
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2 text-red-800 dark:text-red-200">
-              <AlertCircle className="h-4 w-4" />
-              <p>Failed to load analytics data: {error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const currentData = activeSection === 'platform' ? platformData : personalData
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <AnalyticsHeader
-        data={data}
-        loading={loading}
+        title={activeSection === 'platform' ? "Platform Analytics" : "Personal Analytics"}
+        description={activeSection === 'platform' ? "Real-time insights into platform performance" : "Your personal activity and performance metrics"}
+        data={currentData}
+        loading={isLoading}
         timeframe={timeframe}
-        onTimeframeChange={handleTimeframeChange}
-        onRefresh={refresh}
+        onTimeframeChange={setTimeframe}
+        onRefresh={handleRefresh}
         lastUpdated={lastUpdated}
       />
 
-      {loading && !data ? (
-        <LoadingSkeleton />
-      ) : data ? (
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="projects">Projects</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="collaboration">Collaboration</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
-          </TabsList>
+      {/* Section Toggle */}
+      <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg w-fit">
+        <Button
+          variant={activeSection === 'platform' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveSection('platform')}
+          className="flex items-center gap-2"
+        >
+          <Globe className="h-4 w-4" />
+          Platform Analytics
+        </Button>
+        <Button
+          variant={activeSection === 'personal' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveSection('personal')}
+          className="flex items-center gap-2"
+        >
+          <User className="h-4 w-4" />
+          Personal Analytics
+        </Button>
+      </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Total Tasks"
-                description="All tasks in the system"
-                metric={data.tasks.totalTasks}
-              />
-              <MetricCard
-                title="Completed Tasks"
-                description="Successfully finished tasks"
-                metric={data.tasks.completedTasks}
-              />
-              <MetricCard
-                title="Active Users"
-                description="Currently active users"
-                metric={data.users.activeUsers}
-              />
-              <MetricCard
-                title="Revenue"
-                description="Total platform revenue"
-                metric={data.financial?.revenue || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
-                format="currency"
-              />
-            </div>
+      {/* Platform Analytics */}
+      {activeSection === 'platform' && platformData && (
+        <div className="space-y-6">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="Total Users"
+              description="Active platform users"
+              metric={platformData.users?.activeUsers || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Total Projects"
+              description="Projects on platform"
+              metric={platformData.projects?.totalProjects || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Total Tasks"
+              description="Tasks in system"
+              metric={platformData.tasks?.totalTasks || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Revenue"
+              description="Total platform revenue"
+              metric={platformData.financial?.revenue || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+              format="currency"
+            />
+          </div>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {platformData.tasks?.dailyActivity && Array.isArray(platformData.tasks.dailyActivity) && (
               <LineChartCard
                 title="Daily Activity"
-                description="Task completion trend over time"
-                data={data.tasks.dailyActivity}
+                description="Platform activity over time"
+                data={platformData.tasks.dailyActivity.map((item: any) => ({
+                  timestamp: item.date || item.timestamp || new Date().toISOString(),
+                  value: item.completed || item.value || 0
+                }))}
                 color="#3B82F6"
-                gradient={true}
               />
-              
-              <PieChartCard
-                title="Tasks by Status"
-                description="Distribution of task statuses"
-                data={data.tasks.tasksByStatus}
-                dataKey="count"
-                nameKey="status"
-              />
-              
+            )}
+            
+            {platformData.users?.userActivity && Array.isArray(platformData.users.userActivity) && (
               <LineChartCard
                 title="User Activity"
                 description="User engagement over time"
-                data={data.users.userActivity}
+                data={platformData.users.userActivity.map((item: any) => ({
+                  timestamp: item.date || item.timestamp || new Date().toISOString(),
+                  value: item.active || item.value || 0
+                }))}
                 color="#10B981"
               />
-              
+            )}
+
+            {platformData.tasks?.tasksByStatus && (
+              <PieChartCard
+                title="Tasks by Status"
+                description="Distribution of task statuses"
+                data={platformData.tasks.tasksByStatus}
+                dataKey="count"
+                nameKey="status"
+              />
+            )}
+            
+            {platformData.users?.usersByRole && (
               <PieChartCard
                 title="Users by Role"
                 description="User distribution across roles"
-                data={data.users.usersByRole}
+                data={platformData.users.usersByRole}
                 dataKey="count"
                 nameKey="role"
               />
-            </div>
+            )}
+          </div>
 
-            {/* Additional Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <TopContributorsCard
+          {/* Additional Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {platformData.users?.topContributors && (
+              <ContributorsCard
                 title="Top Contributors"
-                description="Most active team members"
-                contributors={data.users.topContributors}
+                contributors={platformData.users.topContributors}
               />
-              
-              <ActivityFeedCard
-                title="Channel Activity"
-                description="Communication across channels"
-                activities={data.collaboration.channelActivity}
+            )}
+            {platformData.collaboration?.channelActivity && (
+              <ActivitiesCard
+                title="Channel Activities"
+                activities={platformData.collaboration.channelActivity.map(channel => ({
+                  id: `channel-${channel.channel}`,
+                  type: 'channel_activity',
+                  description: `${channel.messages} messages in ${channel.channel}`,
+                  timestamp: new Date().toISOString()
+                }))}
               />
-            </div>
-          </TabsContent>
+            )}
+          </div>
+        </div>
+      )}
 
-          <TabsContent value="tasks" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Total Tasks"
-                metric={data.tasks.totalTasks}
-              />
-              <MetricCard
-                title="Completion Rate"
-                metric={data.tasks.completionRate}
-                format="percentage"
-              />
-              <MetricCard
-                title="Avg Completion Time"
-                metric={data.tasks.avgCompletionTime}
-                format="time"
-                suffix="d"
-              />
-              <MetricCard
-                title="Overdue Tasks"
-                metric={data.tasks.overdueTask}
-              />
-            </div>
+      {/* Personal Analytics */}
+      {activeSection === 'personal' && (personalData || dashboardData) && (
+        <div className="space-y-6">
+          {/* Personal Metrics - Use dashboard data if available, fallback to personal data */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="Your Projects"
+              description="Projects you own or are member of"
+              metric={dashboardData?.projects?.totalProjects || personalData?.projects?.totalProjects || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Active Projects"
+              description="Currently active projects"
+              metric={dashboardData?.projects?.activeProjects || personalData?.projects?.activeProjects || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Total Tasks"
+              description="All your tasks"
+              metric={dashboardData?.tasks?.totalTasks || personalData?.tasks?.totalTasks || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+            <MetricCard
+              title="Completed Tasks"
+              description="Tasks you've finished"
+              metric={dashboardData?.tasks?.completedTasks || personalData?.tasks?.completedTasks || { current: 0, previous: 0, change: 0, changePercent: 0, trend: 'stable' }}
+            />
+          </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Personal Charts - Use dashboard data if available */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Use dashboard data for charts if available */}
+            {(dashboardData?.tasks?.dailyActivity || personalData?.tasks?.dailyActivity) && (
               <LineChartCard
-                title="Task Creation Trend"
-                description="New tasks created over time"
-                data={data.tasks.dailyActivity}
-                color="#F59E0B"
-                gradient={true}
+                title="Your Daily Task Activity"
+                description="Your task completion over time"
+                data={(dashboardData?.tasks?.dailyActivity || personalData?.tasks?.dailyActivity).map((item: any) => ({
+                  timestamp: item.date || item.timestamp || new Date().toISOString(),
+                  value: item.completed || item.value || 0,
+                  label: item.label || new Date(item.date || item.timestamp).toLocaleDateString()
+                }))}
+                color="#3B82F6"
               />
-              
-              <PieChartCard
-                title="Tasks by Priority"
-                description="Priority distribution"
-                data={data.tasks.tasksByPriority}
-                dataKey="count"
-                nameKey="priority"
-              />
-              
+            )}
+            
+            {(dashboardData?.collaboration?.communicationTrend || personalData?.collaboration?.communicationTrend) && (
               <LineChartCard
-                title="Weekly Progress"
-                description="Task completion weekly trend"
-                data={data.tasks.weeklyTrend}
-                color="#8B5CF6"
+                title="Communication Activity"
+                description="Your messaging and collaboration"
+                data={(dashboardData?.collaboration?.communicationTrend || personalData?.collaboration?.communicationTrend).map((item: any) => ({
+                  timestamp: item.date || item.timestamp || new Date().toISOString(),
+                  value: item.messages || item.value || 0,
+                  label: item.label || new Date(item.date || item.timestamp).toLocaleDateString()
+                }))}
+                color="#10B981"
               />
-              
-              <PieChartCard
-                title="Task Status Breakdown"
-                description="Current status distribution"
-                data={data.tasks.tasksByStatus}
-                dataKey="percentage"
-                nameKey="status"
-                type="bar"
-              />
-            </div>
-          </TabsContent>
+            )}
 
-          <TabsContent value="projects" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <MetricCard
-                title="Total Projects"
-                metric={data.projects.totalProjects}
-              />
-              <MetricCard
-                title="Active Projects"
-                metric={data.projects.activeProjects}
-              />
-              <MetricCard
-                title="Completed Projects"
-                metric={data.projects.completedProjects}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {(dashboardData?.tasks?.tasksByStatus || personalData?.tasks?.tasksByStatus) && (
               <PieChartCard
-                title="Projects by Status"
-                description="Current project distribution"
-                data={data.projects.projectsByStatus}
+                title="Your Tasks by Status"
+                description="Distribution of your task statuses"
+                data={dashboardData?.tasks?.tasksByStatus || personalData?.tasks?.tasksByStatus}
                 dataKey="count"
                 nameKey="status"
               />
-              
+            )}
+            
+            {(dashboardData?.projects?.projectsByStatus || personalData?.projects?.projectsByStatus) && (
               <PieChartCard
-                title="Resource Allocation"
-                description="Team resource distribution"
-                data={data.projects.resourceAllocation}
-                dataKey="value"
-                nameKey="name"
-              />
-              
-              <LineChartCard
-                title="Team Productivity"
-                description="Project completion trends"
-                data={data.projects.teamProductivity}
-                color="#EF4444"
-                gradient={true}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Active Users"
-                metric={data.users.activeUsers}
-              />
-              <MetricCard
-                title="New Users"
-                metric={data.users.newUsers}
-              />
-              <MetricCard
-                title="Retention Rate"
-                metric={data.users.userRetention}
-                format="percentage"
-              />
-              <MetricCard
-                title="Engagement Score"
-                metric={data.users.userEngagement}
-                format="percentage"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <LineChartCard
-                title="User Growth"
-                description="User acquisition over time"
-                data={data.users.userActivity}
-                color="#06B6D4"
-                gradient={true}
-              />
-              
-              <PieChartCard
-                title="User Distribution"
-                description="Users by role"
-                data={data.users.usersByRole}
+                title="Your Projects by Status"
+                description="Status breakdown of your projects"
+                data={dashboardData?.projects?.projectsByStatus || personalData?.projects?.projectsByStatus}
                 dataKey="count"
-                nameKey="role"
+                nameKey="status"
               />
-              
-              <TopContributorsCard
-                title="Top Performers"
-                description="Most productive team members"
-                contributors={data.users.topContributors}
-              />
-            </div>
-          </TabsContent>
+            )}
+          </div>
 
-          <TabsContent value="collaboration" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Messages Sent"
-                metric={data.collaboration.totalMessages}
+          {/* Personal Activity Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {(dashboardData?.users?.topContributors || personalData?.projects?.teamContributions) && (
+              <ContributorsCard
+                title="Top Contributors"
+                contributors={dashboardData?.users?.topContributors || personalData?.projects?.teamContributions || []}
               />
-              <MetricCard
-                title="Active Chats"
-                metric={data.collaboration.activeChats}
+            )}
+            {personalData?.activity?.recentActivities && (
+              <ActivitiesCard
+                title="Recent Activities"
+                activities={personalData?.activity?.recentActivities || []}
               />
-              <MetricCard
-                title="Files Shared"
-                metric={data.collaboration.fileShares}
-              />
-              <MetricCard
-                title="Meetings Held"
-                metric={data.collaboration.meetingsHeld}
-              />
-            </div>
+            )}
+          </div>
+        </div>
+      )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <LineChartCard
-                title="Communication Trend"
-                description="Daily communication volume"
-                data={data.collaboration.communicationTrend}
-                color="#84CC16"
-                gradient={true}
-              />
-              
-              <ActivityFeedCard
-                title="Channel Statistics"
-                description="Message activity by channel"
-                activities={data.collaboration.channelActivity}
-              />
-            </div>
-          </TabsContent>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )}
 
-          <TabsContent value="system" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <MetricCard
-                title="Response Time"
-                metric={data.system.responseTime}
-                suffix="ms"
-              />
-              <MetricCard
-                title="Uptime"
-                metric={data.system.uptime}
-                format="percentage"
-              />
-              <MetricCard
-                title="Error Rate"
-                metric={data.system.errorRate}
-                format="percentage"
-              />
-              <MetricCard
-                title="API Calls"
-                metric={data.system.apiCalls}
-              />
-              <MetricCard
-                title="Storage Used"
-                metric={data.system.storageUsed}
-                format="percentage"
-              />
+      {/* Empty State */}
+      {!isLoading && !currentData && (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Analytics Data</h3>
+              <p className="text-muted-foreground mb-4">
+                Analytics data is not available at the moment.
+              </p>
+              <Button onClick={handleRefresh} variant="outline">
+                <Activity className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <LineChartCard
-                title="Performance Metrics"
-                description="System performance over time"
-                data={data.system.performanceMetrics}
-                color="#EC4899"
-                gradient={true}
-              />
-              
-              <PieChartCard
-                title="Error Distribution"
-                description="Types of errors encountered"
-                data={data.system.errorsByType}
-                dataKey="count"
-                nameKey="type"
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-      ) : null}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

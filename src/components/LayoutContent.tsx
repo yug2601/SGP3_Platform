@@ -8,9 +8,9 @@ import { useUIStore } from '@/lib/zustand'
 import { SignedIn } from '@clerk/nextjs'
 import { NotificationToast } from '@/components/NotificationToast'
 
-const Header = dynamic(() => import('@/components/Header').then(m => m.Header), { ssr: false })
-const Sidebar = dynamic(() => import('@/components/Sidebar').then(m => m.Sidebar), { ssr: false })
-const Footer = dynamic(() => import('@/components/Footer').then(m => m.Footer), { ssr: false })
+const Header = dynamic(() => import('@/components/Header').then(m => m.Header))
+const Sidebar = dynamic(() => import('@/components/Sidebar').then(m => m.Sidebar))
+const Footer = dynamic(() => import('@/components/Footer').then(m => m.Footer))
 
 export function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

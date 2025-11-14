@@ -173,7 +173,7 @@ export async function GET() {
                 },
                 createdAt: new Date(),
                 updatedAt: new Date()
-              }
+              } as any
             }
           }
         } else {
@@ -183,9 +183,10 @@ export async function GET() {
     }
     
     // Ensure the user profile has all required fields
-    if (userProfile && !userProfile.name) {
-      const firstName = userProfile.firstName || user.firstName || ''
-      const lastName = userProfile.lastName || user.lastName || ''
+    if (userProfile && !(userProfile as any).name) {
+      const profileDoc = userProfile as any
+      const firstName = profileDoc.firstName || user.firstName || ''
+      const lastName = profileDoc.lastName || user.lastName || ''
       const fullName = `${firstName} ${lastName}`.trim() || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
       
       try {
@@ -193,15 +194,15 @@ export async function GET() {
           { clerkId: userId },
           { $set: { name: fullName, firstName, lastName } }
         )
-        userProfile.name = fullName
-        userProfile.firstName = firstName
-        userProfile.lastName = lastName
+        profileDoc.name = fullName
+        profileDoc.firstName = firstName
+        profileDoc.lastName = lastName
       } catch (updateError) {
         console.error('Failed to update user name:', updateError)
         // Update in-memory object anyway
-        userProfile.name = fullName
-        userProfile.firstName = firstName
-        userProfile.lastName = lastName
+        profileDoc.name = fullName
+        profileDoc.firstName = firstName
+        profileDoc.lastName = lastName
       }
     }
 

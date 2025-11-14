@@ -95,9 +95,9 @@ export function PieChartCard({
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold">{data[nameKey]}</p>
-          <p className="text-blue-600">
+        <div className="bg-popover p-3 border border-border rounded-lg shadow-lg">
+          <p className="font-semibold text-popover-foreground">{data[nameKey]}</p>
+          <p className="text-primary">
             {dataKey === 'percentage' ? `${data[dataKey]}%` : data[dataKey]}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function PieChartCard({
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-sm text-gray-600">{entry.value}</span>
+          <span className="text-sm text-muted-foreground">{entry.value}</span>
         </div>
       ))}
     </div>

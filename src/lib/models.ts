@@ -44,10 +44,12 @@ const NotificationSchema = new Schema({
   title: { type: String, required: true },
   message: { type: String, required: true },
   isRead: { type: Boolean, default: false },
+  archived: { type: Boolean, default: false },
   time: { type: Date, default: Date.now },
   sender: UserRefSchema,
 })
 NotificationSchema.index({ userId: 1, time: -1 })
+NotificationSchema.index({ userId: 1, archived: 1, time: -1 })
 
 const ActivitySchema = new Schema({
   type: { type: String, required: true },

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, memo } from "react"
+import { useEffect, useMemo, useState, memo, useRef, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { motion } from "@/components/motion"
 import { Search, Plus, Hash, Send, Smile, FolderOpen } from "lucide-react"
@@ -13,6 +13,21 @@ const ChatMessage = dynamic(() => import("@/components/ChatMessage").then(m => m
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
 import type { Project, ChatMessageItem } from "@/lib/types"
+
+// Popular WhatsApp-like emojis
+const popularEmojis = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
+  '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+  '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
+  '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+  '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+  '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
+  '👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙',
+  '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐', '🖖', '👋',
+  '🤝', '👏', '👐', '🙌', '🤲', '🙏', '✍️', '💪', '🦾', '🦿',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+  '💕', '💖', '💗', '💘', '💝', '💞', '💟', '💯', '💢', '💥'
+]
 
 const ProjectRoomItem = memo(function ProjectRoomItem({ p, activeId, onSelect }: { p: Project, activeId: string, onSelect: (id: string) => void }) {
   return (
@@ -42,13 +57,31 @@ export default function ChatPage() {
   const [messageInput, setMessageInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [debounced, setDebounced] = useState("")
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [currentUserName, setCurrentUserName] = useState<string>('You')
+  const [deletingMessage, setDeletingMessage] = useState<string | null>(null)
+  const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     api<Project[]>("/api/projects").then((p) => {
       setProjects(p)
       if (p[0]) setSelectedProjectId(p[0].id)
     }).catch(() => setProjects([]))
-  }, [])
+    
+    // Get current user name
+    api<{ name: string }>("/api/auth/me").then(me => {
+      setCurrentUserName(me.name || user?.fullName || 'You')
+    }).catch(() => {
+      setCurrentUserName(user?.fullName || 'You')
+    })
+  }, [user])
+
+  // Auto-scroll chat to bottom when messages change
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
+    }
+  }, [messages])
 
   useEffect(() => {
     if (!selectedProjectId) return
@@ -95,17 +128,18 @@ export default function ChatPage() {
     return projects.filter(p => p.name.toLowerCase().includes(q))
   }, [projects, debounced])
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!messageInput.trim() || !selectedProjectId) return
     const optimistic: ChatMessageItem = {
       id: Math.random().toString(36).slice(2, 9),
       projectId: selectedProjectId,
       content: messageInput,
-      sender: { id: user?.id || 'me', name: user?.fullName || 'You' },
+      sender: { id: user?.id || 'me', name: currentUserName },
       timestamp: new Date().toISOString(),
     }
     setMessages(prev => [...prev, optimistic])
     setMessageInput("")
+    setShowEmojiPicker(false) // Close emoji picker after sending
     try {
       const created = await api<ChatMessageItem>(`/api/chat/${selectedProjectId}`, {
         method: 'POST',
@@ -114,7 +148,41 @@ export default function ChatPage() {
       setMessages(prev => prev.map(m => m.id === optimistic.id ? created : m))
       // Message sent successfully - polling will pick up updates
     } catch {}
-  }
+  }, [messageInput, selectedProjectId, user?.id, currentUserName])
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }, [handleSendMessage])
+
+  const addEmoji = useCallback((emoji: string) => {
+    setMessageInput(prev => prev + emoji)
+    setShowEmojiPicker(false)
+  }, [])
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    // Set loading state immediately for better UX
+    setDeletingMessage(messageId)
+    
+    try {
+      await api(`/api/chat/${selectedProjectId}/messages/${messageId}`, {
+        method: 'DELETE'
+      })
+      
+      // Remove message from local state immediately for better UX
+      setMessages(prev => prev.filter(m => m.id !== messageId))
+    } catch (error: any) {
+      console.error('Failed to delete message:', error)
+      
+      // Show user-friendly error message
+      const errorMessage = error?.message || 'Failed to delete message. Please try again.'
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setDeletingMessage(null)
+    }
+  }, [selectedProjectId])
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -180,38 +248,130 @@ export default function ChatPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                {messages.map((m) => (
-                  <ChatMessage key={m.id} message={{
-                    id: m.id,
-                    content: m.content,
-                    sender: { name: m.sender.name, avatar: m.sender.avatar },
-                    timestamp: new Date(m.timestamp).toLocaleTimeString(),
-                    isCurrentUser: (user?.fullName || 'You') === m.sender.name,
-                  }} />
-                ))}
-                {messages.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No messages yet.</p>
+            <CardContent className="flex-1 flex flex-col min-h-0 p-4">
+              {/* Messages Area */}
+              <div 
+                ref={chatMessagesRef}
+                className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0"
+                style={{ scrollBehavior: 'smooth' }}
+              >
+                {messages.length > 0 ? (
+                  messages.map((m) => {
+                    const isCurrentUser = m.sender.name === currentUserName || m.sender.name === 'You' || m.sender.id === user?.id
+                    const isDeleting = deletingMessage === m.id
+                    
+                    return (
+                      <motion.div
+                        key={m.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ 
+                          opacity: isDeleting ? 0.5 : 1, 
+                          y: 0,
+                          scale: isDeleting ? 0.95 : 1
+                        }}
+                        exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className={cn(
+                          "group relative",
+                          isDeleting && "pointer-events-none"
+                        )}
+                      >
+                        <div className="relative">
+                          <ChatMessage 
+                            message={{
+                              id: m.id,
+                              content: m.content,
+                              sender: { name: m.sender.name, avatar: m.sender.avatar },
+                              timestamp: new Date(m.timestamp).toLocaleTimeString(),
+                              isCurrentUser,
+                            }}
+                            onShowActions={() => {
+                              if (isCurrentUser && !isDeleting) {
+                                if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+                                  handleDeleteMessage(m.id)
+                                }
+                              }
+                            }}
+                          />
+                          
+                          {/* Deleting overlay */}
+                          {isDeleting && (
+                            <div className="absolute inset-0 bg-white/50 dark:bg-black/50 rounded-lg flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+                  </div>
                 )}
               </div>
             </CardContent>
 
+            {/* Message Input Area */}
             <div className="border-t p-4">
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder={`Message #${selectedProject.name}`}
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                  className="flex-1"
-                />
-                <Button size="icon" variant="ghost">
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border max-h-32 overflow-y-auto"
+                >
+                  <div className="grid grid-cols-10 gap-1">
+                    {popularEmojis.map((emoji, index) => (
+                      <button
+                        key={index}
+                        onClick={() => addEmoji(emoji)}
+                        className="text-xl hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded transition-colors"
+                        title={emoji}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="flex gap-2 items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="flex-shrink-0"
+                >
                   <Smile className="h-4 w-4" />
                 </Button>
-                <Button onClick={handleSendMessage}>
+                <div className="flex-1 relative">
+                  <textarea
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={`Message #${selectedProject.name}... (Press Enter to send)`}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    rows={1}
+                    style={{ minHeight: '40px', maxHeight: '120px' }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement
+                      target.style.height = 'auto'
+                      target.style.height = Math.min(target.scrollHeight, 120) + 'px'
+                    }}
+                  />
+                </div>
+                <Button 
+                  onClick={handleSendMessage}
+                  disabled={!messageInput.trim()}
+                  className="flex-shrink-0"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                Press Enter to send • Shift+Enter for new line
               </div>
             </div>
           </>

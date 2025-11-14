@@ -18,57 +18,81 @@ import {
 const mockTasks = [
   {
     id: "1",
+    projectId: "proj-1",
     title: "Design homepage mockup",
     description: "Create wireframes and high-fidelity mockups for the new homepage design",
     status: "done" as const,
     priority: "high" as const,
     dueDate: "Nov 15",
-    assignee: { name: "Jane Smith", avatar: "" }
+    assignee: { id: "user-1", name: "Jane Smith", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-1'
   },
   {
     id: "2",
+    projectId: "proj-1",
     title: "Implement responsive navigation",
     description: "Build mobile-responsive navigation component with hamburger menu",
     status: "in-progress" as const,
     priority: "medium" as const,
     dueDate: "Nov 20",
-    assignee: { name: "Mike Johnson", avatar: "" }
+    assignee: { id: "user-2", name: "Mike Johnson", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-2'
   },
   {
     id: "3",
+    projectId: "proj-1",
     title: "Set up authentication system",
     description: "Implement user login and registration functionality",
     status: "todo" as const,
     priority: "high" as const,
     dueDate: "Nov 25",
-    assignee: { name: "Sarah Wilson", avatar: "" }
+    assignee: { id: "user-3", name: "Sarah Wilson", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-3'
   },
   {
     id: "4",
+    projectId: "proj-1",
     title: "Create user dashboard",
     description: "Design and implement user dashboard with analytics",
     status: "todo" as const,
     priority: "medium" as const,
     dueDate: "Dec 1",
-    assignee: { name: "John Doe", avatar: "" }
+    assignee: { id: "user-4", name: "John Doe", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-4'
   },
   {
     id: "5",
+    projectId: "proj-1",
     title: "Optimize database queries",
     description: "Improve performance by optimizing slow database queries",
     status: "in-progress" as const,
     priority: "low" as const,
     dueDate: "Dec 5",
-    assignee: { name: "Sarah Wilson", avatar: "" }
+    assignee: { id: "user-5", name: "Sarah Wilson", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-5'
   },
   {
     id: "6",
+    projectId: "proj-1",
     title: "Write API documentation",
     description: "Document all API endpoints with examples and usage",
     status: "todo" as const,
     priority: "low" as const,
     dueDate: "Dec 10",
-    assignee: { name: "Mike Johnson", avatar: "" }
+    assignee: { id: "user-6", name: "Mike Johnson", avatar: "" },
+    createdAt: new Date('2024-01-01').toISOString(),
+    updatedAt: new Date('2024-01-01').toISOString(),
+    creatorId: 'user-6'
   }
 ]
 

@@ -75,25 +75,27 @@ export function LineChartCard({
         <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <ChartComponent data={data}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.2} />
               <XAxis 
                 dataKey="label" 
-                tick={{ fontSize: 12 }}
-                tickLine={{ stroke: '#e2e8f0' }}
-                axisLine={{ stroke: '#e2e8f0' }}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
-                tickLine={{ stroke: '#e2e8f0' }}
-                axisLine={{ stroke: '#e2e8f0' }}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
               />
               <Tooltip 
                 contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'hsl(var(--popover))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  color: 'hsl(var(--popover-foreground))'
                 }}
+                labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
               />
               {gradient ? (
                 <>
@@ -107,10 +109,10 @@ export function LineChartCard({
                     type="monotone"
                     dataKey={dataKey}
                     stroke={color}
-                    strokeWidth={2}
+                    strokeWidth={3}
                     fill={`url(#gradient-${color})`}
-                    dot={{ fill: color, strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: color, strokeWidth: 2 }}
+                    dot={{ fill: color, stroke: 'hsl(var(--background))', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: color, stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                   />
                 </>
               ) : (
@@ -118,9 +120,9 @@ export function LineChartCard({
                   type="monotone"
                   dataKey={dataKey}
                   stroke={color}
-                  strokeWidth={2}
-                  dot={{ fill: color, strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: color, strokeWidth: 2 }}
+                  strokeWidth={3}
+                  dot={{ fill: color, stroke: 'hsl(var(--background))', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, fill: color, stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                 />
               )}
             </ChartComponent>

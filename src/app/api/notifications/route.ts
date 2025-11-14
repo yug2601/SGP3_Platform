@@ -3,13 +3,23 @@ import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
 import { NotificationModel } from '@/lib/models'
 
-export async function GET() {
+export async function GET(req: Request) {
   const { userId } = await auth()
   if (!userId) return new NextResponse('Unauthorized', { status: 401 })
   
   try {
     await dbConnect()
-    const docs = await NotificationModel.find({ userId }).sort({ time: -1 }).lean()
+    
+    // Check if we want archived notifications
+    const { searchParams } = new URL(req.url)
+    const showArchived = searchParams.get('archived') === 'true'
+    
+    // Filter based on archived status
+    const filter = showArchived 
+      ? { userId, archived: true }
+      : { userId, $or: [{ archived: false }, { archived: { $exists: false } }] }
+    
+    const docs = await NotificationModel.find(filter).sort({ time: -1 }).lean()
     const items = docs.map((n: any) => ({
       id: n._id.toString(),
       userId: n.userId,
@@ -17,6 +27,7 @@ export async function GET() {
       title: n.title,
       message: n.message,
       isRead: !!n.isRead,
+      archived: !!n.archived,
       time: (n.time instanceof Date ? n.time : new Date(n.time)).toISOString(),
       sender: n.sender || undefined,
     }))

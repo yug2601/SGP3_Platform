@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download, RefreshCw, Calendar, TrendingUp } from 'lucide-react'
-import { DashboardAnalytics } from '@/lib/types'
+import { DashboardAnalytics, PersonalAnalyticsData } from '@/lib/types'
 import { format } from 'date-fns'
 
 interface AnalyticsHeaderProps {
-  data: DashboardAnalytics | null
+  data: DashboardAnalytics | PersonalAnalyticsData | null
   loading: boolean
   timeframe: string
   onTimeframeChange: (timeframe: string) => void
   onRefresh: () => void
   lastUpdated: Date | null
+  title?: string
+  description?: string
 }
 
 const timeframeOptions = [
@@ -32,7 +34,9 @@ export function AnalyticsHeader({
   timeframe,
   onTimeframeChange,
   onRefresh,
-  lastUpdated
+  lastUpdated,
+  title = "Analytics Dashboard",
+  description = "Real-time insights into your platform's performance"
 }: AnalyticsHeaderProps) {
   const [exportLoading, setExportLoading] = useState(false)
 
@@ -41,12 +45,25 @@ export function AnalyticsHeader({
     
     setExportLoading(true)
     try {
-      // Create a simple CSV export
-      const csvContent = `Analytics Report - ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}\n\n` +
-        `Total Users,${data.overview.totalUsers}\n` +
-        `Total Projects,${data.overview.totalProjects}\n` +
-        `Total Tasks,${data.overview.totalTasks}\n` +
-        `Revenue,$${data.overview.revenue.toLocaleString()}\n`
+      // Check if it's platform analytics data
+      const isPlatformData = 'overview' in data
+      
+      let csvContent = `Analytics Report - ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}\n\n`
+      
+      if (isPlatformData) {
+        // Platform analytics export
+        const platformData = data as DashboardAnalytics
+        csvContent += `Total Users,${platformData.overview.totalUsers}\n` +
+          `Total Projects,${platformData.overview.totalProjects}\n` +
+          `Total Tasks,${platformData.overview.totalTasks}\n` +
+          `Revenue,$${platformData.overview.revenue.toLocaleString()}\n`
+      } else {
+        // Personal analytics export
+        const personalData = data as PersonalAnalyticsData
+        csvContent += `Total Projects,${personalData.projects?.totalProjects?.current || 0}\n` +
+          `Active Projects,${personalData.projects?.activeProjects?.current || 0}\n` +
+          `Total Messages,${personalData.collaboration?.totalMessages?.current || 0}\n`
+      }
       
       const blob = new Blob([csvContent], { type: 'text/csv' })
       const url = window.URL.createObjectURL(blob)
@@ -69,9 +86,9 @@ export function AnalyticsHeader({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
           <p className="text-muted-foreground">
-            Real-time insights into your platform's performance
+            {description}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -130,7 +147,7 @@ export function AnalyticsHeader({
       </div>
 
       {/* Overview Cards */}
-      {data && (
+      {data && 'overview' in data && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="pb-3">
@@ -139,7 +156,7 @@ export function AnalyticsHeader({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data.overview.totalUsers.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{(data as DashboardAnalytics).overview.totalUsers.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Active platform users
               </p>
@@ -153,7 +170,7 @@ export function AnalyticsHeader({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data.overview.totalProjects.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{(data as DashboardAnalytics).overview.totalProjects.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Projects created
               </p>
@@ -167,7 +184,7 @@ export function AnalyticsHeader({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data.overview.totalTasks.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{(data as DashboardAnalytics).overview.totalTasks.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Tasks managed
               </p>
@@ -182,7 +199,7 @@ export function AnalyticsHeader({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${data.overview.revenue.toLocaleString()}
+                ${(data as DashboardAnalytics).overview.revenue.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Total revenue

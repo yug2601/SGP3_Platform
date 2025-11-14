@@ -1,52 +1,98 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "@/components/motion"
 import { 
   Settings, 
-  User, 
   Bell, 
-  Shield, 
   Palette, 
   Save,
-  Trash2
+  Edit2,
+  X,
+  Check
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "next-themes"
+import { useProfile } from "@/lib/hooks/useProfile"
+
+// Available timezones
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC - Coordinated Universal Time' },
+  { value: 'America/New_York', label: 'EST - Eastern Standard Time' },
+  { value: 'America/Chicago', label: 'CST - Central Standard Time' },
+  { value: 'America/Denver', label: 'MST - Mountain Standard Time' },
+  { value: 'America/Los_Angeles', label: 'PST - Pacific Standard Time' },
+  { value: 'Europe/London', label: 'GMT - Greenwich Mean Time' },
+  { value: 'Asia/Kolkata', label: 'IST - India Standard Time' },
+  { value: 'Asia/Dubai', label: 'GST - Gulf Standard Time' },
+]
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
-  const [settings, setSettings] = useState({
-    notifications: {
-      email: true,
-      push: false,
-      desktop: true,
-      marketing: false
-    },
-    privacy: {
-      profileVisible: true,
-      activityVisible: false,
-      onlineStatus: true
-    },
-    preferences: {
-      language: "en",
-      timezone: "UTC",
-      dateFormat: "MM/DD/YYYY"
-    }
+  const { profile, updateProfile } = useProfile()
+  const [editingSection, setEditingSection] = useState<string | null>(null)
+  
+  const [profileNotifications, setProfileNotifications] = useState({
+    emailNotifications: true,
+    pushNotifications: false,
+    weeklyDigest: true,
+    projectUpdates: true,
+    taskReminders: true,
+    teamInvites: true
   })
-
-  const handleSettingChange = (category: string, key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [key]: value
-      }
-    }))
+  
+  const [profilePreferences, setProfilePreferences] = useState({
+    theme: "system",
+    timezone: "UTC"
+  })
+  
+  // Load profile data when available
+  useEffect(() => {
+    if (profile) {
+      setProfileNotifications({ ...profile.notificationSettings })
+      setProfilePreferences({ ...profile.preferences })
+    }
+  }, [profile])
+  
+  const handleNotificationChange = (key: string, value: boolean) => {
+    setProfileNotifications(prev => ({ ...prev, [key]: value }))
+  }
+  
+  const handlePreferenceChange = (key: string, value: string) => {
+    setProfilePreferences(prev => ({ ...prev, [key]: value }))
+  }
+  
+  const handleSaveNotifications = async () => {
+    if (!updateProfile) return
+    
+    try {
+      await updateProfile({
+        notificationSettings: profileNotifications
+      })
+      setEditingSection(null)
+    } catch (err) {
+      console.error('Failed to update notifications:', err)
+    }
+  }
+  
+  const handleSavePreferences = async () => {
+    if (!updateProfile) return
+    
+    try {
+      await updateProfile({
+        preferences: {
+          theme: profilePreferences.theme as 'light' | 'dark' | 'system',
+          timezone: profilePreferences.timezone
+        }
+      })
+      setTheme(profilePreferences.theme) // Also update the theme immediately
+      setEditingSection(null)
+    } catch (err) {
+      console.error('Failed to update preferences:', err)
+    }
   }
 
   return (
@@ -67,73 +113,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Settings Tabs */}
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general">General</TabsTrigger>
+      <Tabs defaultValue="notifications" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  General Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Language</label>
-                    <select 
-                      className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={settings.preferences.language}
-                      onChange={(e) => handleSettingChange("preferences", "language", e.target.value)}
-                    >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Timezone</label>
-                    <select 
-                      className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={settings.preferences.timezone}
-                      onChange={(e) => handleSettingChange("preferences", "timezone", e.target.value)}
-                    >
-                      <option value="UTC">UTC</option>
-                      <option value="EST">Eastern Time</option>
-                      <option value="PST">Pacific Time</option>
-                      <option value="GMT">Greenwich Mean Time</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Date Format</label>
-                  <select 
-                    className="w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={settings.preferences.dateFormat}
-                    onChange={(e) => handleSettingChange("preferences", "dateFormat", e.target.value)}
-                  >
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
+
 
         <TabsContent value="notifications" className="space-y-6">
           <motion.div
@@ -142,225 +128,169 @@ export default function SettingsPage() {
             transition={{ duration: 0.5 }}
           >
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="h-5 w-5" />
-                  Notification Preferences
+                  Notification Settings
                 </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editingSection === 'notifications' ? setEditingSection(null) : setEditingSection('notifications')}
+                >
+                  {editingSection === 'notifications' ? <X className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
+                  {editingSection === 'notifications' ? 'Cancel' : 'Edit'}
+                </Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive notifications via email
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.email}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("notifications", "email", checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Push Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive push notifications in browser
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.push}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("notifications", "push", checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Desktop Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Show desktop notifications
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.desktop}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("notifications", "desktop", checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Marketing Emails</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive updates about new features
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.marketing}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("notifications", "marketing", checked)
-                      }
-                    />
-                  </div>
+                  {Object.entries(profileNotifications).map(([key, value]) => {
+                    const labels: Record<string, { title: string; description: string }> = {
+                      emailNotifications: { title: 'Email Notifications', description: 'Receive notifications via email' },
+                      pushNotifications: { title: 'Push Notifications', description: 'Receive push notifications in browser' },
+                      weeklyDigest: { title: 'Weekly Digest', description: 'Get a weekly summary of your activity' },
+                      projectUpdates: { title: 'Project Updates', description: 'Notifications about project changes' },
+                      taskReminders: { title: 'Task Reminders', description: 'Reminders for upcoming deadlines' },
+                      teamInvites: { title: 'Team Invites', description: 'Notifications for team invitations' }
+                    }
+                    
+                    const config = labels[key]
+                    if (!config) return null
+                    
+                    return (
+                      <div key={key} className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{config.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {config.description}
+                          </p>
+                        </div>
+                        {editingSection === 'notifications' ? (
+                          <Switch
+                            checked={value}
+                            onCheckedChange={(checked) => handleNotificationChange(key, checked)}
+                          />
+                        ) : (
+                          <div className="flex items-center">
+                            {value ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <X className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
+                {editingSection === 'notifications' && (
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button onClick={handleSaveNotifications} size="sm">
+                      <Save className="h-4 w-4 mr-1" />
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         </TabsContent>
 
-        <TabsContent value="privacy" className="space-y-6">
+        <TabsContent value="preferences" className="space-y-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Privacy Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Profile Visibility</p>
-                      <p className="text-sm text-muted-foreground">
-                        Make your profile visible to other users
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.profileVisible}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("privacy", "profileVisible", checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Activity Status</p>
-                      <p className="text-sm text-muted-foreground">
-                        Show your activity status to team members
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.activityVisible}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("privacy", "activityVisible", checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Online Status</p>
-                      <p className="text-sm text-muted-foreground">
-                        Show when you're online
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.onlineStatus}
-                      onCheckedChange={(checked) => 
-                        handleSettingChange("privacy", "onlineStatus", checked)
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="appearance" className="space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
-                  Appearance Settings
+                  Display Preferences
                 </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editingSection === 'preferences' ? setEditingSection(null) : setEditingSection('preferences')}
+                >
+                  {editingSection === 'preferences' ? <X className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
+                  {editingSection === 'preferences' ? 'Cancel' : 'Edit'}
+                </Button>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <h3 className="font-medium mb-3">Theme</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button
-                      variant={theme === "light" ? "default" : "outline"}
-                      onClick={() => setTheme("light")}
-                      className="h-20 flex-col"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-300 mb-2" />
-                      Light
-                    </Button>
-                    <Button
-                      variant={theme === "dark" ? "default" : "outline"}
-                      onClick={() => setTheme("dark")}
-                      className="h-20 flex-col"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gray-800 border-2 border-gray-600 mb-2" />
-                      Dark
-                    </Button>
-                    <Button
-                      variant={theme === "system" ? "default" : "outline"}
-                      onClick={() => setTheme("system")}
-                      className="h-20 flex-col"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-white to-gray-800 border-2 border-gray-400 mb-2" />
-                      System
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="account" className="space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Account Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Change Password</label>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
-                      <Input type="password" placeholder="Current password" />
-                      <Input type="password" placeholder="New password" />
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">Theme</label>
+                      <p className="text-xs text-muted-foreground">Choose your preferred color scheme</p>
                     </div>
+                    {editingSection === 'preferences' ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { value: 'light', label: 'Light', icon: '☀️' },
+                          { value: 'dark', label: 'Dark', icon: '🌙' },
+                          { value: 'system', label: 'System', icon: '💻' }
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => handlePreferenceChange('theme', option.value)}
+                            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all hover:shadow-md ${
+                              profilePreferences.theme === option.value
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            }`}
+                          >
+                            <span className="text-lg">{option.icon}</span>
+                            <span className="font-medium">{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <span className="text-lg">
+                          {profilePreferences.theme === 'light' ? '☀️' : 
+                           profilePreferences.theme === 'dark' ? '🌙' : '💻'}
+                        </span>
+                        <span className="font-medium capitalize">
+                          {profilePreferences.theme}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <Button>
-                    <Save className="h-4 w-4 mr-2" />
-                    Update Password
-                  </Button>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">Timezone</label>
+                      <p className="text-xs text-muted-foreground">Select your local timezone</p>
+                    </div>
+                    {editingSection === 'preferences' ? (
+                      <select 
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600"
+                        value={profilePreferences.timezone}
+                        onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
+                      >
+                        {TIMEZONES.map(tz => (
+                          <option key={tz.value} value={tz.value}>{tz.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <span className="font-medium">
+                          {TIMEZONES.find(tz => tz.value === profilePreferences.timezone)?.label || profilePreferences.timezone}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="border-t pt-6">
-                  <h3 className="font-medium text-red-600 mb-2">Danger Zone</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Once you delete your account, there is no going back. Please be certain.
-                  </p>
-                  <Button variant="destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Account
-                  </Button>
-                </div>
+
+                {editingSection === 'preferences' && (
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button onClick={handleSavePreferences} size="sm">
+                      <Save className="h-4 w-4 mr-1" />
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

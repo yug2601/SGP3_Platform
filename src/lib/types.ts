@@ -62,6 +62,7 @@ export interface Notification {
   title: string
   message: string
   isRead: boolean
+  archived?: boolean
   time: string // ISO
   sender?: UserRef
 }
@@ -235,4 +236,108 @@ export interface ProjectFile {
   url: string
   fileKey: string // For cloud storage identification
   fileBuffer?: string // Base64 encoded file data (optional for backward compatibility)
+}
+
+export interface PersonalMetric {
+  current: number
+  previous: number
+  change: number
+  changePercent: number
+  trend: 'up' | 'down' | 'stable'
+}
+
+export interface PersonalAnalyticsData {
+  tasks: {
+    totalTasks: PersonalMetric
+    completedTasks: PersonalMetric
+    pendingTasks: PersonalMetric
+    overdueTask: PersonalMetric
+    completionRate: PersonalMetric
+    avgCompletionTime: PersonalMetric
+    dailyActivity: Array<{
+      date: string
+      completed: number
+      created: number
+      label: string
+      timestamp: string
+      value: number
+    }>
+    tasksByPriority: Array<{
+      priority: string
+      count: number
+      percentage: number
+      color: string
+    }>
+    tasksByStatus: Array<{
+      status: string
+      count: number
+      percentage: number
+      color: string
+    }>
+    weeklyTrend: Array<{
+      week: string
+      completed: number
+      created: number
+    }>
+  }
+  projects: {
+    totalProjects: PersonalMetric
+    activeProjects: PersonalMetric
+    completedProjects: PersonalMetric
+    ownedProjects: PersonalMetric
+    projectsByStatus: Array<{
+      status: string
+      count: number
+      color: string
+    }>
+    teamContributions: Array<{
+      id: string
+      name: string
+      contributions: number
+      avatar?: string
+    }>
+    productivity: Array<{
+      date: string
+      productivity: number
+      label: string
+      timestamp: string
+      value: number
+    }>
+  }
+  collaboration: {
+    totalMessages: PersonalMetric
+    activeChats: PersonalMetric
+    fileShares: PersonalMetric
+    teamInteractions: PersonalMetric
+    communicationTrend: Array<{
+      date: string
+      messages: number
+      reactions: number
+      label: string
+      timestamp: string
+      value: number
+    }>
+    topChannels: Array<{
+      id: string
+      type: string
+      description: string
+      timestamp: string
+    }>
+  }
+  activity: {
+    loginStreak: PersonalMetric
+    timeSpent: PersonalMetric
+    peakActivityHour: string
+    activityByDay: Array<{
+      name: string
+      value: number
+      color: string
+    }>
+    recentActivities: Array<{
+      id: string
+      type: string
+      description: string
+      timestamp: string
+    }>
+  }
 }

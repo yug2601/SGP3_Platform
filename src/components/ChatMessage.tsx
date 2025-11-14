@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { MoreVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChatMessageProps {
@@ -15,11 +17,12 @@ interface ChatMessageProps {
     timestamp: string
     isCurrentUser: boolean
   }
+  onShowActions?: () => void
 }
 
 import { memo } from "react"
 
-function ChatMessageInner({ message }: ChatMessageProps) {
+function ChatMessageInner({ message, onShowActions }: ChatMessageProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -30,12 +33,26 @@ function ChatMessageInner({ message }: ChatMessageProps) {
         message.isCurrentUser ? "flex-row-reverse" : "flex-row"
       )}
     >
-      <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={message.sender.avatar} />
-        <AvatarFallback className="text-xs">
-          {message.sender.name.split(" ").map(n => n[0]).join("")}
-        </AvatarFallback>
-      </Avatar>
+      {/* Avatar for other users, 3-dot menu for current user */}
+      {message.isCurrentUser ? (
+        <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-muted rounded-full"
+            onClick={onShowActions}
+          >
+            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+      ) : (
+        <Avatar className="h-8 w-8 flex-shrink-0">
+          <AvatarImage src={message.sender.avatar} />
+          <AvatarFallback className="text-xs">
+            {message.sender.name.split(" ").map(n => n[0]).join("")}
+          </AvatarFallback>
+        </Avatar>
+      )}
       
       <div
         className={cn(

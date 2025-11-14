@@ -57,7 +57,8 @@ export async function GET() {
       }
       
       if (userProfile) {
-        const displayName = userProfile.name || `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 'User'
+        const profileDoc = userProfile as any
+        const displayName = profileDoc.name || `${profileDoc.firstName || ''} ${profileDoc.lastName || ''}`.trim() || 'User'
         return NextResponse.json({ 
           name: displayName,
           userId: userId 
