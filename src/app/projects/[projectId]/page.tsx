@@ -848,7 +848,11 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => window.open(file.url, '_blank')}
+                          onClick={() => {
+                            // Properly encode the fileKey for URL
+                            const encodedFileKey = encodeURIComponent(file.fileKey)
+                            window.open(`/api/files/${encodedFileKey}`, '_blank')
+                          }}
                           title="Download file"
                         >
                           <Download className="h-4 w-4" />

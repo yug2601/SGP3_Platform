@@ -101,10 +101,15 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // In a real app, you'd upload to cloud storage (AWS S3, Cloudinary, etc.)
-    // For this demo, we'll simulate file storage
+    // Store file data directly in database for demo
+    
+    // Read file as buffer
+    const arrayBuffer = await file.arrayBuffer()
+    const fileBuffer = Buffer.from(arrayBuffer)
+    
+    // Generate unique filename for URL
     const fileKey = `${id}/${Date.now()}-${file.name}`
-    const fileUrl = `/api/files/${fileKey}` // Simulated URL
+    const fileUrl = `/api/files/${fileKey}` // URL for download
 
     const fileData = {
       projectId: id,
@@ -119,6 +124,7 @@ export async function POST(
       uploadedAt: new Date().toISOString(),
       url: fileUrl,
       fileKey,
+      fileBuffer: fileBuffer.toString('base64'), // Store file as base64 in database
     }
 
     const createdFile = await ProjectFileModel.create(fileData)

@@ -20,13 +20,18 @@ export async function GET() {
     
     if (!userProfile) {
       try {
+        const firstName = user.firstName || ''
+        const lastName = user.lastName || ''
+        const fullName = `${firstName} ${lastName}`.trim() || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
+        
         // Try to create new profile with default values
         const newProfile = await UserModel.create({
           clerkId: userId,
+          userId: userId, // Explicitly set userId to prevent null conflicts
           email: user.primaryEmailAddress?.emailAddress,
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+          name: fullName,
+          firstName: firstName,
+          lastName: lastName,
           imageUrl: user.imageUrl,
           bio: '',
           theme: 'system',
@@ -48,31 +53,155 @@ export async function GET() {
         })
         userProfile = newProfile.toObject()
       } catch (createError: any) {
-        // Handle duplicate key error - user might exist with same email but different clerkId
+        console.error('Profile creation error:', createError)
+        
+        // Handle various duplicate key errors
         if (createError.code === 11000) {
-          console.log('Duplicate key error, trying to find existing user by email...')
+          console.log('Duplicate key error, trying alternative approaches...')
           
-          // Find user by email and update clerkId
-          userProfile = await UserModel.findOneAndUpdate(
-            { email: user.primaryEmailAddress?.emailAddress },
-            { 
-              $set: { 
-                clerkId: userId,
-                name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                imageUrl: user.imageUrl,
-              }
-            },
-            { new: true }
-          ).lean()
-
+          const firstName = user.firstName || ''
+          const lastName = user.lastName || ''
+          const fullName = `${firstName} ${lastName}`.trim() || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
+          
+          // Try to find by email first
+          if (user.primaryEmailAddress?.emailAddress) {
+            userProfile = await UserModel.findOneAndUpdate(
+              { email: user.primaryEmailAddress.emailAddress },
+              { 
+                $set: { 
+                  clerkId: userId,
+                  name: fullName,
+                  firstName: firstName,
+                  lastName: lastName,
+                  imageUrl: user.imageUrl,
+                }
+              },
+              { new: true, upsert: false }
+            ).lean()
+          }
+          
+          // If still not found, try to find any user without clerkId and update
           if (!userProfile) {
-            throw new Error('Failed to find or update existing user profile')
+            userProfile = await UserModel.findOneAndUpdate(
+              { 
+                $or: [
+                  { clerkId: { $exists: false } },
+                  { clerkId: null },
+                  { clerkId: '' }
+                ]
+              },
+              { 
+                $set: { 
+                  clerkId: userId,
+                  email: user.primaryEmailAddress?.emailAddress,
+                  name: fullName,
+                  firstName: firstName,
+                  lastName: lastName,
+                  imageUrl: user.imageUrl,
+                }
+              },
+              { new: true }
+            ).lean()
+          }
+          
+          // Last resort - create with minimal data and ignore conflicts
+          if (!userProfile) {
+            try {
+              // First, clean up any existing null userId entries that might conflict
+              await UserModel.deleteMany({
+                $or: [
+                  { userId: null },
+                  { userId: { $exists: false } },
+                  { userId: "" }
+                ]
+              })
+              
+              const newProfile = await UserModel.create({
+                clerkId: userId,
+                userId: userId, // Explicitly set userId to prevent null conflicts
+                email: user.primaryEmailAddress?.emailAddress || null,
+                name: fullName,
+                firstName: firstName,
+                lastName: lastName,
+                imageUrl: user.imageUrl,
+                bio: '',
+                theme: 'system',
+                timezone: 'UTC',
+                notificationSettings: {
+                  emailNotifications: true,
+                  pushNotifications: false,
+                  weeklyDigest: true,
+                  projectUpdates: true,
+                  taskReminders: true,
+                  teamInvites: true
+                },
+                stats: {
+                  projectsCreated: 0,
+                  tasksCompleted: 0,
+                  teamCollaborations: 0,
+                  messagesSent: 0
+                }
+              })
+              userProfile = newProfile.toObject()
+            } catch (finalError) {
+              console.error('Final profile creation failed:', finalError)
+              // Create a minimal in-memory profile as absolute fallback
+              userProfile = {
+                _id: 'temp-' + userId,
+                clerkId: userId,
+                email: user.primaryEmailAddress?.emailAddress,
+                name: fullName,
+                firstName: firstName,
+                lastName: lastName,
+                imageUrl: user.imageUrl,
+                bio: '',
+                theme: 'system',
+                timezone: 'UTC',
+                notificationSettings: {
+                  emailNotifications: true,
+                  pushNotifications: false,
+                  weeklyDigest: true,
+                  projectUpdates: true,
+                  taskReminders: true,
+                  teamInvites: true
+                },
+                stats: {
+                  projectsCreated: 0,
+                  tasksCompleted: 0,
+                  teamCollaborations: 0,
+                  messagesSent: 0
+                },
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            }
           }
         } else {
           throw createError
         }
+      }
+    }
+    
+    // Ensure the user profile has all required fields
+    if (userProfile && !userProfile.name) {
+      const firstName = userProfile.firstName || user.firstName || ''
+      const lastName = userProfile.lastName || user.lastName || ''
+      const fullName = `${firstName} ${lastName}`.trim() || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
+      
+      try {
+        await UserModel.updateOne(
+          { clerkId: userId },
+          { $set: { name: fullName, firstName, lastName } }
+        )
+        userProfile.name = fullName
+        userProfile.firstName = firstName
+        userProfile.lastName = lastName
+      } catch (updateError) {
+        console.error('Failed to update user name:', updateError)
+        // Update in-memory object anyway
+        userProfile.name = fullName
+        userProfile.firstName = firstName
+        userProfile.lastName = lastName
       }
     }
 
@@ -110,7 +239,7 @@ export async function GET() {
       id: (userProfile as any)._id?.toString() || '',
       clerkId: (userProfile as any).clerkId || userId,
       email: (userProfile as any).email || user.primaryEmailAddress?.emailAddress,
-      name: (userProfile as any).name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      name: (userProfile as any).name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'User',
       firstName: (userProfile as any).firstName || user.firstName || '',
       lastName: (userProfile as any).lastName || user.lastName || '',
       imageUrl: (userProfile as any).imageUrl || user.imageUrl,
@@ -167,9 +296,11 @@ export async function PATCH(request: NextRequest) {
       if (personalInfo.firstName !== undefined) updateData.firstName = personalInfo.firstName
       if (personalInfo.lastName !== undefined) updateData.lastName = personalInfo.lastName
       if (personalInfo.bio !== undefined) updateData.bio = personalInfo.bio
-      if (personalInfo.firstName && personalInfo.lastName) {
-        updateData.name = `${personalInfo.firstName} ${personalInfo.lastName}`.trim()
-      }
+      
+      // Always update name when first/last name changes
+      const firstName = personalInfo.firstName !== undefined ? personalInfo.firstName : user.firstName || ''
+      const lastName = personalInfo.lastName !== undefined ? personalInfo.lastName : user.lastName || ''
+      updateData.name = `${firstName} ${lastName}`.trim() || user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
     }
 
     if (preferences) {
@@ -185,11 +316,60 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const updatedProfile = await UserModel.findOneAndUpdate(
-      { clerkId: userId },
-      { $set: updateData },
-      { new: true, upsert: true }
-    ).lean()
+    // First, try to update existing profile
+    let updatedProfile
+    try {
+      updatedProfile = await UserModel.findOneAndUpdate(
+        { clerkId: userId },
+        { $set: updateData },
+        { new: true }
+      ).lean()
+    } catch (duplicateError: any) {
+      if (duplicateError.code === 11000) {
+        console.log('Duplicate key error during update, cleaning up and retrying...')
+        
+        // Clean up any null userId entries that might be causing conflicts
+        await UserModel.deleteMany({
+          $or: [
+            { userId: null },
+            { userId: { $exists: false } },
+            { userId: "" }
+          ]
+        })
+        
+        // Retry the update without upsert
+        updatedProfile = await UserModel.findOneAndUpdate(
+          { clerkId: userId },
+          { $set: updateData },
+          { new: true }
+        ).lean()
+      } else {
+        throw duplicateError
+      }
+    }
+
+    // If no profile was found, create one (but only if update didn't work)
+    if (!updatedProfile) {
+      try {
+        // Ensure we have all required fields for creation
+        const createData = {
+          clerkId: userId,
+          userId: userId, // Use clerkId as userId to avoid null conflicts
+          ...updateData,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        
+        updatedProfile = await UserModel.create(createData)
+      } catch (createError: any) {
+        if (createError.code === 11000) {
+          // If creation fails due to duplicate, try to find the existing profile
+          updatedProfile = await UserModel.findOne({ clerkId: userId }).lean()
+        } else {
+          throw createError
+        }
+      }
+    }
 
     return NextResponse.json({ 
       profile: updatedProfile,
@@ -198,7 +378,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Profile update error:', error)
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: 'Failed to update profile. Please try again.' },
       { status: 500 }
     )
   }

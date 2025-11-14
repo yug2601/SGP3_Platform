@@ -35,6 +35,31 @@ const THEMES = [
 export default function ProfilePage() {
   const { isLoaded } = useUser()
   const { profile, loading, error, updateProfile } = useProfile()
+  
+  // If profile is still loading or missing, show a default profile
+  const displayProfile = React.useMemo(() => profile || {
+    id: '',
+    clerkId: '',
+    email: '',
+    name: 'User',
+    firstName: '',
+    lastName: '',
+    imageUrl: '',
+    bio: '',
+    preferences: { theme: 'system' as const, timezone: 'UTC' },
+    notificationSettings: {
+      emailNotifications: true,
+      pushNotifications: false,
+      weeklyDigest: true,
+      projectUpdates: true,
+      taskReminders: true,
+      teamInvites: true
+    },
+    stats: { projectsCreated: 0, tasksCompleted: 0, teamCollaborations: 0, messagesSent: 0 },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }, [profile])
+  
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     firstName: '',
@@ -54,17 +79,17 @@ export default function ProfilePage() {
 
   // Update form data when profile loads
   React.useEffect(() => {
-    if (profile) {
+    if (displayProfile) {
       setFormData({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
-        bio: profile.bio || '',
-        theme: profile.preferences.theme || 'system',
-        timezone: profile.preferences.timezone || 'UTC',
-        notificationSettings: { ...profile.notificationSettings }
+        firstName: displayProfile.firstName || '',
+        lastName: displayProfile.lastName || '',
+        bio: displayProfile.bio || '',
+        theme: displayProfile.preferences.theme || 'system',
+        timezone: displayProfile.preferences.timezone || 'UTC',
+        notificationSettings: { ...displayProfile.notificationSettings }
       })
     }
-  }, [profile])
+  }, [displayProfile])
 
   const handleSave = async (section: string) => {
     if (!updateProfile) return
@@ -121,19 +146,45 @@ export default function ProfilePage() {
             <Skeleton className="h-4 w-32" />
           </div>
         </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
 
-  if (error || !profile) {
+  if (error) {
     return (
       <div className="space-y-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-5 w-5" />
-              <p>Error loading profile. Please try refreshing the page.</p>
+              <div>
+                <p className="font-medium">Error loading profile</p>
+                <p className="text-sm">Please try refreshing the page. If the problem persists, contact support.</p>
+              </div>
             </div>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="mt-4"
+            >
+              Refresh Page
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -148,21 +199,21 @@ export default function ProfilePage() {
         className="flex items-center gap-6"
       >
         <Avatar className="h-20 w-20">
-          <AvatarImage src={profile.imageUrl} />
+          <AvatarImage src={displayProfile.imageUrl} />
           <AvatarFallback>
-            {profile.firstName?.[0]}{profile.lastName?.[0]}
+            {displayProfile.firstName?.[0]}{displayProfile.lastName?.[0]}
           </AvatarFallback>
         </Avatar>
         <div>
           <h1 className="text-3xl font-bold">
-            {profile.firstName && profile.lastName 
-              ? `${profile.firstName} ${profile.lastName}` 
-              : profile.name || 'User Profile'
+            {displayProfile.firstName && displayProfile.lastName 
+              ? `${displayProfile.firstName} ${displayProfile.lastName}` 
+              : displayProfile.name || 'User Profile'
             }
           </h1>
-          <p className="text-muted-foreground">{profile.email}</p>
+          <p className="text-muted-foreground">{displayProfile.email}</p>
           <p className="text-xs text-muted-foreground">
-            Member since {new Date(profile.createdAt).toLocaleDateString()}
+            Member since {new Date(displayProfile.createdAt).toLocaleDateString()}
           </p>
         </div>
       </motion.div>
@@ -200,7 +251,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {profile.firstName || 'Not set'}
+                      {displayProfile.firstName || 'Not set'}
                     </p>
                   )}
                 </div>
@@ -215,7 +266,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {profile.lastName || 'Not set'}
+                      {displayProfile.lastName || 'Not set'}
                     </p>
                   )}
                 </div>
@@ -230,7 +281,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {profile.bio || 'No bio added yet'}
+                      {displayProfile.bio || 'No bio added yet'}
                     </p>
                   )}
                 </div>
@@ -252,19 +303,19 @@ export default function ProfilePage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm">Projects Created</span>
-                  <span className="font-semibold text-blue-600">{profile.stats.projectsCreated}</span>
+                  <span className="font-semibold text-blue-600">{displayProfile.stats.projectsCreated}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Tasks Completed</span>
-                  <span className="font-semibold text-green-600">{profile.stats.tasksCompleted}</span>
+                  <span className="font-semibold text-green-600">{displayProfile.stats.tasksCompleted}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Team Collaborations</span>
-                  <span className="font-semibold text-purple-600">{profile.stats.teamCollaborations}</span>
+                  <span className="font-semibold text-purple-600">{displayProfile.stats.teamCollaborations}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Messages Sent</span>
-                  <span className="font-semibold text-orange-600">{profile.stats.messagesSent}</span>
+                  <span className="font-semibold text-orange-600">{displayProfile.stats.messagesSent}</span>
                 </div>
               </CardContent>
             </Card>
@@ -301,7 +352,7 @@ export default function ProfilePage() {
                   </select>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1 capitalize">
-                    {profile.preferences.theme}
+                    {displayProfile.preferences.theme}
                   </p>
                 )}
               </div>
@@ -321,7 +372,7 @@ export default function ProfilePage() {
                   </select>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {TIMEZONES.find(tz => tz.value === profile.preferences.timezone)?.label || profile.preferences.timezone}
+                    {TIMEZONES.find(tz => tz.value === displayProfile.preferences.timezone)?.label || displayProfile.preferences.timezone}
                   </p>
                 )}
               </div>
@@ -352,7 +403,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                {Object.entries(profile.notificationSettings).map(([key, value]) => {
+                {Object.entries(displayProfile.notificationSettings).map(([key, value]) => {
                   const labels: Record<string, string> = {
                     emailNotifications: 'Email Notifications',
                     pushNotifications: 'Push Notifications', 

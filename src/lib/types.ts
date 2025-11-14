@@ -234,4 +234,5 @@ export interface ProjectFile {
   uploadedAt: string // ISO date
   url: string
   fileKey: string // For cloud storage identification
+  fileBuffer?: string // Base64 encoded file data (optional for backward compatibility)
 }

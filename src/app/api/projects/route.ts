@@ -68,9 +68,70 @@ export async function POST(req: Request) {
   
   // Get current user info to add as leader
   const { UserModel } = await import('@/lib/models')
-  const currentUser: any = await UserModel.findOne({ clerkId: userId }).lean()
-  const userName = currentUser?.name || 'Project Owner'
-  const userAvatar = currentUser?.imageUrl || ''
+  const { currentUser: clerkUser } = await import('@clerk/nextjs/server')
+  
+  let dbUser: any = null
+  let userName = 'User'
+  let userAvatar = ''
+  
+  try {
+    dbUser = await UserModel.findOne({ clerkId: userId }).lean()
+  } catch (dbError) {
+    console.error('Error fetching user from database:', dbError)
+  }
+  
+  // If user doesn't exist in database, try to create them
+  if (!dbUser) {
+    try {
+      const clerk = await clerkUser()
+      if (clerk) {
+        const firstName = clerk.firstName || ''
+        const lastName = clerk.lastName || ''
+        const fullName = `${firstName} ${lastName}`.trim() || clerk.username || clerk.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'
+        
+        try {
+          dbUser = await UserModel.create({
+            clerkId: userId,
+            email: clerk.primaryEmailAddress?.emailAddress,
+            name: fullName,
+            firstName: firstName,
+            lastName: lastName,
+            imageUrl: clerk.imageUrl,
+            bio: '',
+            theme: 'system',
+            timezone: 'UTC',
+            notificationSettings: {
+              emailNotifications: true,
+              pushNotifications: false,
+              weeklyDigest: true,
+              projectUpdates: true,
+              taskReminders: true,
+              teamInvites: true
+            },
+            stats: {
+              projectsCreated: 0,
+              tasksCompleted: 0,
+              teamCollaborations: 0,
+              messagesSent: 0
+            }
+          })
+        } catch (createError: any) {
+          console.error('Error creating user profile:', createError)
+          // Even if database creation fails, use Clerk data
+          userName = fullName
+          userAvatar = clerk.imageUrl || ''
+        }
+      }
+    } catch (clerkError) {
+      console.error('Error fetching Clerk user:', clerkError)
+    }
+  }
+  
+  // Set user display data
+  if (dbUser) {
+    userName = dbUser.name || `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || 'User'
+    userAvatar = dbUser.imageUrl || ''
+  }
   
   // Always add the creator as the first member with leader role
   const projectMembers = [

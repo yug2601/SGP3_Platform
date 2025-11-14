@@ -15,10 +15,12 @@ export async function GET(
     }
 
     const { fileKey } = await params
+    // Decode the fileKey which was URL encoded
+    const decodedFileKey = decodeURIComponent(fileKey)
     await dbConnect()
 
     // Find the file by fileKey
-    const file = await ProjectFileModel.findOne({ fileKey }).lean() as any
+    const file = await ProjectFileModel.findOne({ fileKey: decodedFileKey }).lean() as any
     if (!file) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
@@ -34,21 +36,32 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // In a real application, you would fetch the file from cloud storage
-    // For this demo, we'll simulate file download by returning file metadata
-    // In production, you would stream the actual file content
+    // Serve file from database
     
-    // For demo purposes, return a response that triggers download
-    return new NextResponse(
-      `This is a demo file: ${file.name}\nSize: ${file.size} bytes\nUploaded: ${file.uploadedAt}`,
-      {
+    console.log(`Looking for file with key: ${decodedFileKey}`)
+    
+    // Check if file has buffer data stored
+    if (!file.fileBuffer) {
+      console.log(`File has no buffer data: ${decodedFileKey}`)
+      return NextResponse.json({ error: 'File data not found' }, { status: 404 })
+    }
+    
+    // Convert base64 back to buffer and serve
+    try {
+      const fileBuffer = Buffer.from(file.fileBuffer, 'base64')
+      
+      return new NextResponse(fileBuffer, {
         status: 200,
         headers: {
-          'Content-Type': file.mimeType,
+          'Content-Type': file.mimeType || 'application/octet-stream',
           'Content-Disposition': `attachment; filename="${file.name}"`,
+          'Content-Length': file.size.toString(),
         },
-      }
-    )
+      })
+    } catch (readError) {
+      console.error('Error processing file buffer:', readError)
+      return NextResponse.json({ error: 'Error processing file' }, { status: 500 })
+    }
   } catch (error) {
     console.error('Error downloading file:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -116,7 +116,8 @@ const ProjectFileSchema = new Schema({
   },
   uploadedAt: { type: String, required: true },
   url: { type: String, required: true },
-  fileKey: { type: String, required: true }
+  fileKey: { type: String, required: true },
+  fileBuffer: { type: String, required: true } // Base64 encoded file data
 })
 
 export const UserModel = models.User || model('User', UserSchema)

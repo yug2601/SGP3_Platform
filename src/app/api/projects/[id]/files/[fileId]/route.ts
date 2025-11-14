@@ -43,8 +43,7 @@ export async function DELETE(
     project.filesCount = Math.max(0, (project.filesCount || 0) - 1)
     await project.save()
 
-    // In a real app, also delete from cloud storage
-    // await deleteFromCloudStorage(file.fileKey)
+    // Note: File data was stored in database, so no physical file to delete
 
     return NextResponse.json({ success: true })
   } catch (error) {
