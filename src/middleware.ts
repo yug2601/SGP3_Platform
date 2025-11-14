@@ -13,9 +13,14 @@ const isPublicRoute = createRouteMatcher([
   '/auth(.*)',
   '/api/activity(.*)',
   '/api/health',
+  '/api/auth/(.*)',
   '/not-found',
   '/error',
-  '/auth-required'
+  '/auth-required',
+  // Clerk specific routes that need to be public
+  '/__clerk(.*)',
+  '/_next(.*)',
+  '/favicon.ico'
 ])
 
 // Fallback middleware when Clerk is not configured
@@ -64,8 +69,8 @@ export default function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Run for API routes too but they are marked public in createRouteMatcher above
+    '/((?!_next|__clerk|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Run for API routes but exclude Clerk internal routes
     '/(api|trpc)(.*)',
   ],
 }
