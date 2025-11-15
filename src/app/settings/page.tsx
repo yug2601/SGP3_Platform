@@ -32,28 +32,26 @@ export default function SettingsPage() {
     teamInvites: true
   })
   
-  const [profilePreferences, setProfilePreferences] = useState({
-    theme: "system"
-  })
-  
   // Load profile data when available
   useEffect(() => {
     if (profile) {
       setProfileNotifications({ ...profile.notificationSettings })
-      setProfilePreferences({ theme: profile.preferences?.theme || "system" })
+      // Sync global theme with profile theme if different
+      if (profile.preferences?.theme && profile.preferences.theme !== theme) {
+        setTheme(profile.preferences.theme)
+      }
     }
-  }, [profile])
+  }, [profile, theme, setTheme])
   
   const handleNotificationChange = (key: string, value: boolean) => {
     setProfileNotifications(prev => ({ ...prev, [key]: value }))
   }
   
-  const handlePreferenceChange = (key: string, value: string) => {
-    setProfilePreferences(prev => ({ ...prev, [key]: value }))
-    // Immediately apply theme change to sync with global theme toggle
-    if (key === 'theme') {
-      setTheme(value)
-    }
+  const handleThemeChange = (newTheme: string) => {
+    // Immediately apply theme change using global theme state
+    setTheme(newTheme)
+    // Also save to profile
+    handleSaveTheme(newTheme)
   }
   
   const handleSaveNotifications = async () => {
@@ -69,18 +67,18 @@ export default function SettingsPage() {
     }
   }
   
-  const handleSavePreferences = async () => {
+  const handleSaveTheme = async (themeValue?: string) => {
     if (!updateProfile) return
     
+    const themeToSave = themeValue || theme
     try {
       await updateProfile({
         preferences: {
-          theme: profilePreferences.theme as 'light' | 'dark' | 'system'
+          theme: themeToSave as 'light' | 'dark' | 'system'
         }
       })
-      setEditingSection(null)
     } catch (err) {
-      console.error('Failed to update preferences:', err)
+      console.error('Failed to update theme preference:', err)
     }
   }
 
@@ -222,9 +220,9 @@ export default function SettingsPage() {
                         ].map((option) => (
                           <button
                             key={option.value}
-                            onClick={() => handlePreferenceChange('theme', option.value)}
+                            onClick={() => handleThemeChange(option.value)}
                             className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all hover:shadow-md ${
-                              profilePreferences.theme === option.value
+                              theme === option.value
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                             }`}
@@ -237,11 +235,11 @@ export default function SettingsPage() {
                     ) : (
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <span className="text-lg">
-                          {profilePreferences.theme === 'light' ? '☀️' : 
-                           profilePreferences.theme === 'dark' ? '🌙' : '💻'}
+                          {theme === 'light' ? '☀️' : 
+                           theme === 'dark' ? '🌙' : '💻'}
                         </span>
                         <span className="font-medium capitalize">
-                          {profilePreferences.theme}
+                          {theme}
                         </span>
                       </div>
                     )}
@@ -250,7 +248,7 @@ export default function SettingsPage() {
 
                 {editingSection === 'preferences' && (
                   <div className="flex gap-2 pt-4 border-t">
-                    <Button onClick={handleSavePreferences} size="sm">
+                    <Button onClick={() => { handleSaveTheme(); setEditingSection(null); }} size="sm">
                       <Save className="h-4 w-4 mr-1" />
                       Save Changes
                     </Button>
