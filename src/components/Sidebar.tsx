@@ -115,23 +115,6 @@ export function Sidebar() {
             )
           })}
         </nav>
-
-        {/* Bottom section for additional info */}
-        {!sidebarCollapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="p-4 border-t border-border/50"
-          >
-            <div className="rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 p-3 border border-primary/20">
-              <p className="text-xs font-medium text-primary mb-1">Pro Tips</p>
-              <p className="text-xs text-muted-foreground">
-                Use keyboard shortcuts for faster navigation
-              </p>
-            </div>
-          </motion.div>
-        )}
       </div>
     </motion.aside>
   )
