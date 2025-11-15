@@ -246,6 +246,7 @@ export default function SettingsPage() {
                       </div>
                     )}
                   </div>
+                </div>
 
                 {editingSection === 'preferences' && (
                   <div className="flex gap-2 pt-4 border-t">
