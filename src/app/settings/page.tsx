@@ -18,18 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "next-themes"
 import { useProfile } from "@/lib/hooks/useProfile"
 
-// Available timezones
-const TIMEZONES = [
-  { value: 'UTC', label: 'UTC - Coordinated Universal Time' },
-  { value: 'America/New_York', label: 'EST - Eastern Standard Time' },
-  { value: 'America/Chicago', label: 'CST - Central Standard Time' },
-  { value: 'America/Denver', label: 'MST - Mountain Standard Time' },
-  { value: 'America/Los_Angeles', label: 'PST - Pacific Standard Time' },
-  { value: 'Europe/London', label: 'GMT - Greenwich Mean Time' },
-  { value: 'Asia/Kolkata', label: 'IST - India Standard Time' },
-  { value: 'Asia/Dubai', label: 'GST - Gulf Standard Time' },
-]
-
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { profile, updateProfile } = useProfile()
@@ -45,15 +33,14 @@ export default function SettingsPage() {
   })
   
   const [profilePreferences, setProfilePreferences] = useState({
-    theme: "system",
-    timezone: "UTC"
+    theme: "system"
   })
   
   // Load profile data when available
   useEffect(() => {
     if (profile) {
       setProfileNotifications({ ...profile.notificationSettings })
-      setProfilePreferences({ ...profile.preferences })
+      setProfilePreferences({ theme: profile.preferences?.theme || "system" })
     }
   }, [profile])
   
@@ -63,6 +50,10 @@ export default function SettingsPage() {
   
   const handlePreferenceChange = (key: string, value: string) => {
     setProfilePreferences(prev => ({ ...prev, [key]: value }))
+    // Immediately apply theme change to sync with global theme toggle
+    if (key === 'theme') {
+      setTheme(value)
+    }
   }
   
   const handleSaveNotifications = async () => {
@@ -84,11 +75,9 @@ export default function SettingsPage() {
     try {
       await updateProfile({
         preferences: {
-          theme: profilePreferences.theme as 'light' | 'dark' | 'system',
-          timezone: profilePreferences.timezone
+          theme: profilePreferences.theme as 'light' | 'dark' | 'system'
         }
       })
-      setTheme(profilePreferences.theme) // Also update the theme immediately
       setEditingSection(null)
     } catch (err) {
       console.error('Failed to update preferences:', err)
@@ -257,31 +246,6 @@ export default function SettingsPage() {
                       </div>
                     )}
                   </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium">Timezone</label>
-                      <p className="text-xs text-muted-foreground">Select your local timezone</p>
-                    </div>
-                    {editingSection === 'preferences' ? (
-                      <select 
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600"
-                        value={profilePreferences.timezone}
-                        onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
-                      >
-                        {TIMEZONES.map(tz => (
-                          <option key={tz.value} value={tz.value}>{tz.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <span className="font-medium">
-                          {TIMEZONES.find(tz => tz.value === profilePreferences.timezone)?.label || profilePreferences.timezone}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {editingSection === 'preferences' && (
                   <div className="flex gap-2 pt-4 border-t">
