@@ -133,7 +133,7 @@ export default function ChatPage() {
       id: Math.random().toString(36).slice(2, 9),
       projectId: selectedProjectId,
       content: messageInput,
-      sender: { id: user?.id || 'me', name: currentUserName },
+      sender: { id: user?.id || 'anonymous', name: currentUserName },
       timestamp: new Date().toISOString(),
     }
     setMessages(prev => [...prev, optimistic])

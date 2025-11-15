@@ -372,7 +372,7 @@ export default function CalendarPage() {
           <motion.div
             key={task.id}
             draggable
-            onDragStart={(e: React.DragEvent) => onDragStartTask(e, task)}
+            onDragStart={(e: any) => onDragStartTask(e, task)}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: index * 0.05 }}

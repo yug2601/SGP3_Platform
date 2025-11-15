@@ -41,9 +41,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
     }
 
-    // Check if user can delete this message (either owner or admin)
-    if (!message.sender || message.sender.id !== userId) {
-      // Could add additional permission checks here for admins
+    // Check if user can delete this message (flexible matching for different ID formats)
+    const canDelete = message.sender && (
+      message.sender.id === userId || 
+      message.sender.id === 'me' || 
+      message.sender.id === 'anonymous'
+    )
+    
+    if (!canDelete) {
+      console.log('Delete permission denied:', { 
+        messageId, 
+        messageSenderId: message.sender?.id, 
+        currentUserId: userId 
+      })
       return new NextResponse('Forbidden - You can only delete your own messages', { 
         status: 403 
       })

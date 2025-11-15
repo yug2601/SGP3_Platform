@@ -174,7 +174,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
       id: Math.random().toString(36).slice(2, 9),
       projectId: params.projectId,
       content: messageInput,
-      sender: { id: 'me', name: 'You' },
+      sender: { id: user?.id || 'anonymous', name: currentUserName },
       timestamp: new Date().toISOString(),
     }
     setMessages(prev => [...prev, optimistic])
@@ -189,7 +189,7 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
     } catch {
       // ignore
     }
-  }, [messageInput, params.projectId])
+  }, [messageInput, params.projectId, currentUserName, user?.id])
 
   const handleKeyPress = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
