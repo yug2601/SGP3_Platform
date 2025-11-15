@@ -203,6 +203,19 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
     setShowEmojiPicker(false)
   }, [])
 
+  const handleDeleteMessage = React.useCallback(async (messageId: string) => {
+    try {
+      await api(`/api/chat/${params.projectId}/messages/${messageId}`, {
+        method: 'DELETE'
+      })
+      // Remove message from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId))
+    } catch (error: any) {
+      console.error('Failed to delete message:', error)
+      alert('Failed to delete message. Please try again.')
+    }
+  }, [params.projectId])
+
   const updateProjectStatus = React.useCallback(async (newStatus: ProjectStatus) => {
     if (!project) return
     try {
@@ -935,13 +948,23 @@ export default function ProjectDetailPage({ params: paramsPromise }: { params: P
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <ChatMessage message={{
-                        id: m.id,
-                        content: m.content,
-                        sender: { name: m.sender.name, avatar: m.sender.avatar },
-                        timestamp: new Date(m.timestamp).toLocaleTimeString(),
-                        isCurrentUser: m.sender.name === currentUserName || m.sender.name === 'You',
-                      }} />
+                      <ChatMessage 
+                        message={{
+                          id: m.id,
+                          content: m.content,
+                          sender: { name: m.sender.name, avatar: m.sender.avatar },
+                          timestamp: new Date(m.timestamp).toLocaleTimeString(),
+                          isCurrentUser: m.sender.name === currentUserName || m.sender.name === 'You' || m.sender.id === user?.id,
+                        }} 
+                        onShowActions={() => {
+                          const isCurrentUser = m.sender.name === currentUserName || m.sender.name === 'You' || m.sender.id === user?.id
+                          if (isCurrentUser) {
+                            if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+                              handleDeleteMessage(m.id)
+                            }
+                          }
+                        }}
+                      />
                     </motion.div>
                   ))
                 ) : (
